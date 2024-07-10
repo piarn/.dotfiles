@@ -1,0 +1,81 @@
+# ~/.config/alacritty/alacritty.yml
+
+[colors.bright]
+black = "0x45475A"
+blue = "0x89B4FA"
+cyan = "0x94E2D5"
+green = "0xA6E3A1"
+magenta = "0xF5C2E7"
+red = "0xF38BA8"
+white = "0xA6ADC8"
+yellow = "0xF9E2AF"
+
+[colors.cursor]
+cursor = "0xCDD6F4"
+text = "0x1E1E2E"
+
+[colors.normal]
+black = "0x1E1E2E"
+blue = "0x89B4FA"
+cyan = "0x94E2D5"
+green = "0xA6E3A1"
+magenta = "0xF5C2E7"
+red = "0xF38BA8"
+white = "0xBAC2DE"
+yellow = "0xF9E2AF"
+
+[colors.primary]
+background = "0x1E1E2E"
+foreground = "0xCDD6F4"
+
+[font]
+size = 12.0
+
+# Define your font settings for regular monospace font
+[font.normal]
+family = "monospace"
+style = "Regular"
+
+[font.bold]
+family = "monospace"
+style = "Bold"
+
+[font.italic]
+family = "monospace"
+style = "Italic"
+
+[font.bold_italic]
+family = "monospace"
+style = "Bold Italic"
+
+[[keyboard.bindings]]
+action = "Paste"
+key = "V"
+mods = "Control|Shift"
+
+[[keyboard.bindings]]
+action = "Copy"
+key = "C"
+mods = "Control|Shift"
+
+[[keyboard.bindings]]
+action = "ScrollPageUp"
+key = "K"
+mods = "Control|Shift"
+
+[[keyboard.bindings]]
+action = "ScrollPageDown"
+key = "J"
+mods = "Control|Shift"
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[window]
+decorations = "full"
+startup_mode = "Windowed"
+
+[window.padding]
+x = 10
+y = 10

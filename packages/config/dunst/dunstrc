@@ -1,0 +1,17 @@
+[global]
+monitor = 0
+follow = mouse
+width = 600
+height = 300
+notification_limit = 10
+origin = top-center
+progress_bar = true
+progress_bar_horizontal_alignment = center
+progress_bar_height = 10
+progress_bar_min_width = 200
+progress_bar_max_width = 400
+progress_bar_frame_width = 0
+progress_bar_corner_radius = 0
+frame_width = 0
+background = #000000
+#foreground = #ffffff

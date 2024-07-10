@@ -1,0 +1,4 @@
+#exec ~/dotfiles/bin/xkb/keyboard.sh # Set keyboard layout to LT-US
+exec blueman-applet
+exec nm-applet
+exec dunst
