@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Function to perform system update, upgrade, and autoremove
+perform_updates() {
+    echo "Updating the system package list..."
+    if apt update > /dev/null 2>&1; then
+        echo "System package list updated."
+    else
+        echo "Failed to update package list."
+        exit 1
+    fi
+
+    echo "Upgrading the installed system packages..."
+    if apt upgrade -y > /dev/null 2>&1; then
+        echo "System packages upgraded."
+    else
+        echo "Failed to upgrade system packages."
+        exit 1
+    fi
+
+    echo "Removing unused system packages..."
+    apt autoremove -y > /dev/null 2>&1
+    echo "Unused packages removed."
+}
+

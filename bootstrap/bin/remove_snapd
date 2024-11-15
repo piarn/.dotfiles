@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Function to uninstall Snap
+uninstall_snap() {
+    if command -v snap &> /dev/null; then
+        echo "Uninstalling Snap..."
+        systemctl stop snapd.service snapd.socket
+        systemctl disable snapd.service snapd.socket
+        apt purge snapd -y
+        rm -rf /var/cache/snapd /var/snap /snap ~/snap
+        apt purge gnome-software-plugin-snap -y
+        apt autoremove -y
+        echo "snapd hold" | dpkg --set-selections
+        echo "Snap uninstalled."
+    else
+        echo "Snap is not installed."
+    fi
+}
+

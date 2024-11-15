@@ -1,0 +1,26 @@
+# languages
+php-cli
+php-fpm
+composer
+bash
+python3
+python3-dev
+golang
+lua5.3
+liblua5.3-0
+ruby
+ruby-dev
+nodejs
+npm
+mysql-client
+postgresql-client
+redis-tools
+mongodb-clients
+terraform
+ansible
+kubectl
+rustc
+cargo
+docker.io
+helm
+powershell

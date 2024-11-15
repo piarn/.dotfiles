@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Default variables
+DRY_RUN=false
+VERBOSE=false
+
+# Parse arguments for -d (dry-run) and -v (verbose) options
+while getopts "dv" opt; do
+    case ${opt} in
+        d)
+            DRY_RUN=true
+            ;;
+        v)
+            VERBOSE=true
+            ;;
+        *)
+            echo "Usage: $0 [-d] [-v]"
+            exit 1
+            ;;
+    esac
+done
+
+LANGUAGE_FILE="./bootstrap/reg/language"
+
+# Read each line in the language file
+while IFS= read -r language; do
+    # Skip empty lines or comments
+    [[ -z "$language" || "$language" == \#* ]] && continue
+
+    # Check dry-run mode
+    if $DRY_RUN; then
+        echo "[DRY-RUN] Would install language: $language"
+    else
+        # Run the installation command
+        if $VERBOSE; then
+            echo "Installing language: $language"
+        fi
+        apt install -y "$language"
+    fi
+done < "$LANGUAGE_FILE"
+

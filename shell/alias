@@ -1,0 +1,120 @@
+# Basic Listing
+alias l='exa -1'  # List in single column
+# Long Listing
+alias ll='exa -l --group-directories-first'  # Long listing with directories first
+# Long Listing with Hidden Files
+alias la='exa -la --group-directories-first'  # Long listing including hidden files
+# Tree View
+alias lt='exa --tree --level=1 --group-directories-first'  # Tree view with a depth of 1
+alias ltt='exa --tree --level=2 --group-directories-first'  # Tree view with a depth of 1
+alias lttt='exa --tree --level=3 --group-directories-first'  # Tree view with a depth of 2
+alias ltttt='exa --tree --level=4 --group-directories-first'  # Tree view with a depth of 2
+# File Sizes
+alias lS='exa -l --sort=size'  # Sort by file size
+alias lh='exa -lh --group-directories-first'  # Human-readable file sizes
+# Sorting by Time
+alias ltm='exa -l --sort=modified'  # Sort by modification time
+alias ltu='exa -l --sort=accessed'  # Sort by last access time
+# Detailed List of All Files, Including Hidden
+alias lla='exa -la'  # Long listing including hidden files
+# Icons Support (if Nerd Fonts are installed)
+alias lx='exa -l --icons'  # Long listing with icons
+alias lxa='exa -la --icons'  # Long listing including hidden files with icons
+alias lxt='exa --tree --icons'  # Tree view with icons
+# Git Integration
+#alias lg='exa -l --git --group-directories-first'  # Long listing with Git status
+# Detailed List with Git Status and Icons
+#alias lgx='exa -l --git --icons --group-directories-first'  # Long listing with Git status and icons
+# Colorized Output
+alias lc='exa --color=always'  # Force colorized output
+# Listing with Permissions
+alias lp='exa -l --octal-permissions --group-directories-first'  # Show octal permissions
+
+# Quick access useful directories
+# access dotfiles dir
+alias dotfiles='cd ~/.dotfiles'
+# access projects
+alias projects='cd ~/projects'
+# access repositories
+alias repo='cd ~/repositories'
+# access downloads
+alias downloads='cd ~/Downloads'
+# access home
+alias ~='cd ~'
+# access root
+alias root='cd /'
+# access config
+alias config='cd ~/.config'      # Go to .config directory
+# access scripts
+alias scripts='cd ~/scripts'     # Go to scripts directory
+# access logs
+alias logs='cd /var/log'         # Go to system logs directory
+# access src
+alias src='cd /usr/local/src'    # Go to source files directory
+
+# go up one dir level
+alias ..='cd ..'
+# go up two dir levels
+alias ...='cd ../..'
+# go up three dir levels
+alias ....='cd ../../..'
+# open current dir in file manager
+alias open='xdg-open . > /dev/null 2>&1'
+
+# misc
+# make and navigate in to the dir
+alias mkcd='foo() { mkdir -p "$1" && cd "$1"; }; foo'
+# Verbose copy
+alias cp='cp -v'
+# Verbose move
+alias mv='mv -v'
+# Interactive remove with extra safety
+alias rm='rm -I --preserve-root'
+# Interactive directory removal
+alias rmd='rm -rI'
+# Find files by name
+alias f='find . -type f -name'       
+# Find files by extension   
+alias ff='find . -type f -name "*.$1"'  
+# Find directories by name
+alias fd='find . -type d -name'     
+# Enhanced grep with color    
+alias grep='grep --color=auto'    
+# Recursive search excluding common directories      
+alias search='grep -r --exclude-dir={.git,node_modules} .' 
+
+# disk usage
+alias df='df -h'
+# directory sizes
+alias du='du -h --max-depth=1'
+# memory
+alias free='free -m'
+# If you prefer htop over top
+alias top='htop'
+# CPU details
+alias cpu='lscpu'             
+# Show public IP address 
+alias myip='curl ifconfig.me'
+
+# network
+# Quick ping to Google
+alias pingg='ping google.com'
+# Show open ports
+alias ports='netstat -tulanp'
+# Show IP address information
+alias ipinfo='ip -c a'          
+# Flush DNS cache (if systemd)
+alias flushdns='sudo systemd-resolve --flush-caches'
+
+# date
+alias now='date +"%T"'            # Show current time
+# today
+alias today='date +"%A, %B %-d, %Y"' # Show today's date in a nicer format
+# clear
+alias cls='clear && printf "\e[3J"'  # Clear terminal with scrollback buffer
+# path
+alias path='echo -e ${PATH//:/\\n}'  # Show $PATH line by line
+
+# display management
+alias disp="bash $HOME/.dotfiles/script/display_profile_switch.sh"
+

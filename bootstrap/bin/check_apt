@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Function to check if APT package manager is available
+check_apt() {
+    if command -v apt > /dev/null; then
+        echo "APT package manager found..."
+    else
+        echo "This system does not use APT as the package manager. Exiting."
+        exit 1
+    fi
+}
+

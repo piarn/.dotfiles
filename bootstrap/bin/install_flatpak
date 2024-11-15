@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Default variables
+DRY_RUN=false
+VERBOSE=false
+
+# Parse arguments for -d (dry-run) and -v (verbose) options
+while getopts "dv" opt; do
+    case ${opt} in
+        d)
+            DRY_RUN=true
+            ;;
+        v)
+            VERBOSE=true
+            ;;
+        *)
+            echo "Usage: $0 [-d] [-v]"
+            exit 1
+            ;;
+    esac
+done
+
+FLATPAK_FILE="./bootstrap/reg/flatpak"
+
+# Read each line in the flatpak file
+while IFS= read -r flatpak; do
+    # Skip empty lines or comments
+    [[ -z "$flatpak" || "$flatpak" == \#* ]] && continue
+
+    # Check dry-run mode
+    if $DRY_RUN; then
+        echo "[DRY-RUN] Would install flatpak: $flatpak"
+    else
+        # Run the installation command
+        if $VERBOSE; then
+            echo "Installing flatpak: $flatpak"
+        fi
+        flatpak install -y "$flatpak"
+    fi
+done < "$FLATPAK_FILE"
+

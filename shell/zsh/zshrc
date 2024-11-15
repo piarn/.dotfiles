@@ -1,0 +1,34 @@
+# Add deno completions to search path
+if [[ ":$FPATH:" != *":/home/arnas/.zsh/completions:"* ]]; then export FPATH="/home/arnas/.zsh/completions:$FPATH"; fi
+# ~/.zshrc
+
+# Load aliases and functions
+
+# If not running interactively, don't do anything
+[[ -o interactive ]] || return
+
+# Enable Git branch info with vcs_info
+autoload -Uz vcs_info
+zstyle ':vcs_info:*' enable git
+zstyle ':vcs_info:*' check-for-changes true
+zstyle ':vcs_info:git:*' formats '%F{green} %b%f'
+
+# Update vcs_info before each prompt display
+precmd() {
+    vcs_info
+}
+
+# Define the prompt (Left side)
+PS1='%F{blue}%*%f | %F{yellow}%~%f %F{cyan}⟩%f '  # Left prompt with time, path, and symbol
+
+# Define the right prompt (Git branch on the right)
+RPROMPT='%F{magenta}${vcs_info_msg_0_}%f'
+
+# Explanation:
+# - PS1: Left prompt
+#   - %F{blue}%*%f       : Current time in blue
+#   - %F{yellow}%~%f     : Current directory in yellow
+#   - %F{cyan}⟩%f        : Prompt symbol in cyan
+# - RPROMPT: Right prompt
+#   - %F{magenta}${vcs_info_msg_0_}%f : Git branch (if in a Git repo) in magenta
+

@@ -1,0 +1,146 @@
+copy() {
+    local input="$1"
+    local file
+    local cleanup=false
+
+    # Check if input is a file
+    if [ -n "$input" ] && [ -f "$input" ]; then
+        file="$input"
+    elif [ -t 0 ]; then
+        # If there is no input redirection (i.e., stdin is a terminal), print usage
+        echo "Usage: copy <file> or use a pipe"
+        return 1
+    else
+        # Otherwise, read from stdin (pipe)
+        file=$(mktemp)
+        cat > "$file"
+        cleanup=true
+    fi
+
+    if [ -f "$file" ]; then
+        cat "$file" | xsel --clipboard
+        echo "Content copied to clipboard."
+
+        # Clean up the temporary file if used
+        if [ "$cleanup" = true ]; then
+            rm "$file"
+        fi
+    else
+        echo "File not found or no input provided."
+        return 1
+    fi
+}
+
+reload() {
+    if [ -n "$ZSH_VERSION" ]; then
+        source ~/.zshrc
+        echo "Reloaded .zshrc"
+    elif [ -n "$BASH_VERSION" ]; then
+        source ~/.bashrc
+        echo "Reloaded .bashrc"
+    else
+        echo "Unsupported shell. Cannot reload."
+    fi
+}
+
+editrc() {
+    if [ -n "$ZSH_VERSION" ]; then
+        nano ~/.zshrc
+    elif [ -n "$BASH_VERSION" ]; then
+        nano ~/.bashrc
+    else
+        echo "Unsupported shell. Cannot edit."
+    fi
+}
+py() {
+    if [ -z "$1" ]; then
+        echo "Usage: py <script>"
+        return 1
+    fi
+    if [ -f "$1" ]; then
+        python3 "$1"
+    elif [ -f "$1.py" ]; then
+        python3 "$1.py"
+    else
+        echo "Error: file not found."
+        return 1
+    fi
+}
+venv() {
+	source ./bin/activate
+}
+scopy() {
+    local input="$1"
+    local file
+
+    # Check if input is a file
+    if [ -n "$input" ] && [ -f "$input" ]; then
+        file="$input"
+    elif [ -t 0 ]; then
+        # If there is no input redirection (i.e., stdin is a terminal), print usage
+        echo "Usage: scopy <file> or use a pipe"
+        return 1
+    else
+        # Otherwise, read from stdin (pipe)
+        file=$(mktemp)
+        cat > "$file"
+        cleanup=true
+    fi
+
+    if [ -f "$file" ]; then
+        local selected_lines
+        selected_lines=$(cat "$file" | fzf --multi --preview 'echo {}' --preview-window=up:1 --reverse | tee /dev/tty)
+
+        if [ -n "$selected_lines" ]; then
+            echo "$selected_lines" | copy
+            echo "Selected lines copied to clipboard."
+        else
+            echo "No lines selected."
+        fi
+
+        # Clean up the temporary file if used
+        if [ "$cleanup" = true ]; then
+            rm "$file"
+        fi
+    else
+        echo "File not found or no input provided."
+        return 1
+    fi
+}
+
+lock() {
+    # Lock the screen with a solid background color
+	i3lock --nofork --color=000000
+}
+
+add_ssh_key() {
+    echo "Which private key would you like to add?"
+    echo "1) GitHub"
+    echo "2) GitLab"
+    read -p "Select an option (1 or 2): " key_choice
+
+    case $key_choice in
+        1)
+            key_path="$HOME/.ssh/github_key_ed25519"
+            ;;
+        2)
+            key_path="$HOME/.ssh/gitlab_key_ed25519"
+            ;;
+        *)
+            echo "Invalid option."
+            return 1
+            ;;
+    esac
+
+    # Check if the key exists
+    if [ -f "$key_path" ]; then
+        # Start ssh-agent and add the selected key
+        eval "$(ssh-agent -s)"
+        ssh-add "$key_path"
+        echo "Added key: $key_path"
+    else
+        echo "Key not found: $key_path"
+        return 1
+    fi
+}
+

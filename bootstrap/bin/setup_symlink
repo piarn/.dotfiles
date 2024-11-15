@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# This script sets up symlinks based on the ./shell/symlink file
+
+# Define the symlink file
+SYMLINK_FILE="./shell/symlink"
+
+# Default modes
+VERBOSE=false
+DRYRUN=false
+
+# Function to print verbose messages
+verbose_echo() {
+  if [ "$VERBOSE" = true ]; then
+    echo "$1"
+  fi
+}
+
+# Function to simulate actions in dry-run mode
+dryrun_echo() {
+  if [ "$DRYRUN" = true ]; then
+    echo "[Dry-Run] $1"
+  else
+    echo "$1"
+  fi
+}
+
+# Process options for verbose and dry-run modes
+while getopts "vd" opt; do
+  case ${opt} in
+    v )
+      VERBOSE=true
+      ;;
+    d )
+      DRYRUN=true
+      ;;
+    \? )
+      echo "Usage: $0 [-v] [-d]"
+      exit 1
+      ;;
+  esac
+done
+
+# Check if the symlink file exists
+if [[ ! -f "$SYMLINK_FILE" ]]; then
+  echo "Symlink file '$SYMLINK_FILE' not found!"
+  exit 1
+fi
+
+# Loop through each line in the symlink file
+while IFS=" " read -r SOURCE TARGET; do
+  # Skip empty lines or lines that don't contain both a source and a target
+  if [[ -z "$SOURCE" || -z "$TARGET" ]]; then
+    continue
+  fi
+
+  # Check if the source file exists
+  if [[ ! -e "$SOURCE" ]]; then
+    dryrun_echo "Source file '$SOURCE' does not exist. Skipping."
+    continue
+  fi
+
+  # Create the target directory if it doesn't exist
+  TARGET_DIR=$(dirname "$TARGET")
+  if [[ ! -d "$TARGET_DIR" ]]; then
+    dryrun_echo "Target directory '$TARGET_DIR' does not exist. Creating it."
+    if [ "$DRYRUN" = false ]; then
+      mkdir -p "$TARGET_DIR"
+    fi
+  fi
+
+  # Remove the existing target file or symlink if it exists
+  if [[ -e "$TARGET" || -L "$TARGET" ]]; then
+    dryrun_echo "Removing existing target '$TARGET'."
+    if [ "$DRYRUN" = false ]; then
+      rm -rf "$TARGET"
+    fi
+  fi
+
+  # Create the symlink
+  dryrun_echo "Creating symlink: '$SOURCE' -> '$TARGET'."
+  if [ "$DRYRUN" = false ]; then
+    ln -s "$SOURCE" "$TARGET"
+  fi
+
+  # Verbose output
+  verbose_echo "Processed symlink: $SOURCE -> $TARGET"
+
+done < "$SYMLINK_FILE"
+
+echo "Symlinks setup complete."
+

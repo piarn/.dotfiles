@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# This script removes symlinks based on the ./shell/symlink file
+
+# Define the symlink file
+SYMLINK_FILE="./shell/symlink"
+
+# Default modes
+VERBOSE=false
+DRYRUN=false
+
+# Function to print verbose messages
+verbose_echo() {
+  if [ "$VERBOSE" = true ]; then
+    echo "$1"
+  fi
+}
+
+# Function to simulate actions in dry-run mode
+dryrun_echo() {
+  if [ "$DRYRUN" = true ]; then
+    echo "[Dry-Run] $1"
+  else
+    echo "$1"
+  fi
+}
+
+# Process options for verbose and dry-run modes
+while getopts "vd" opt; do
+  case ${opt} in
+    v )
+      VERBOSE=true
+      ;;
+    d )
+      DRYRUN=true
+      ;;
+    \? )
+      echo "Usage: $0 [-v] [-d]"
+      exit 1
+      ;;
+  esac
+done
+
+# Check if the symlink file exists
+if [[ ! -f "$SYMLINK_FILE" ]]; then
+  echo "Symlink file '$SYMLINK_FILE' not found!"
+  exit 1
+fi
+
+# Loop through each line in the symlink file
+while IFS=" " read -r SOURCE TARGET; do
+  # Skip empty lines or lines that don't contain both a source and a target
+  if [[ -z "$SOURCE" || -z "$TARGET" ]]; then
+    continue
+  fi
+
+  # Check if the target is a symlink
+  if [[ ! -L "$TARGET" ]]; then
+    dryrun_echo "Target '$TARGET' is not a symlink. Skipping."
+    continue
+  fi
+
+  # Remove the symlink
+  dryrun_echo "Removing symlink: '$SOURCE' -> '$TARGET'."
+  if [ "$DRYRUN" = false ]; then
+    rm -f "$TARGET"
+  fi
+
+  # Verbose output
+  verbose_echo "Removed symlink: $SOURCE -> $TARGET"
+
+done < "$SYMLINK_FILE"
+
+echo "Symlink removal complete."
+

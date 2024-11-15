@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Function to check if running in Bash
+check_bash() {
+    if [ -n "$BASH_VERSION" ]; then
+        echo "Running in Bash..."
+    else
+        echo "This script is not running in Bash."
+        exit 1
+    fi
+}
+
