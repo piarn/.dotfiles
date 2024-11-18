@@ -3,7 +3,7 @@
 # This script sets up symlinks based on the ./shell/symlink file
 
 # Define the symlink file
-SYMLINK_FILE="./shell/symlink"
+SYMLINK_FILE="../../shell/symlink"
 
 # Default modes
 VERBOSE=false
