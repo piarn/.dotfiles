@@ -20,7 +20,7 @@ while getopts "dv" opt; do
     esac
 done
 
-LANGUAGE_FILE="./bootstrap/reg/language"
+LANGUAGE_FILE="../reg/language"
 
 # Read each line in the language file
 while IFS= read -r language; do
