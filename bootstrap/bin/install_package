@@ -20,7 +20,7 @@ while getopts "dv" opt; do
     esac
 done
 
-PACKAGE_FILE="./bootstrap/reg/package"
+PACKAGE_FILE="../reg/package"
 
 # Read each line in the package file
 while IFS= read -r package; do
