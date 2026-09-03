@@ -1,1 +1,3 @@
 fish
+eza
+zoxide
