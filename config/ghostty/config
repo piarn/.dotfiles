@@ -1,1 +1,2 @@
 focus-follows-mouse = true
+config-file = ?~/.rice/ghostty/theme.conf
