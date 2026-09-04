@@ -1,6 +1,20 @@
-[user]
-	name = piarn
-	email = 102540190+piarn@users.noreply.github.com
+[init]
+	defaultBranch = main
+
+[core]
+	editor = nvim
+
+[pull]
+	rebase = false
+
+[push]
+	autoSetupRemote = true
+
+[color]
+	ui = auto
+
+[include]
+	path = ~/.gitconfig.identity.github
 
 [includeIf "gitdir:~/projects/"]
-	path = ~/.gitconfig.work
+	path = ~/.gitconfig.identity.work

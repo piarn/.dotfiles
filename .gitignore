@@ -4,4 +4,4 @@ completions/
 local.fish
 
 # git
-git/.gitconfig.work
+git/.gitconfig.identity.work
