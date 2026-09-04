@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash fish ghostty git nvim)
+PACKAGES=(bash fish ghostty git nvim tmux)
 
 install_stow() {
     if command -v stow >/dev/null 2>&1; then
@@ -79,6 +79,14 @@ install_lsp_servers() {
         +qa 2>&1 | grep -Ev '^\[[a-zA-Z0-9._-]+\] +(log|fetch|status|checkout)' || true
 }
 
+install_tpm() {
+    local tpm_dir="$HOME/.tmux/plugins/tpm"
+    if [ -d "$tpm_dir" ]; then
+        return
+    fi
+    git clone https://github.com/tmux-plugins/tpm "$tpm_dir"
+}
+
 install_stow
 install_node
 cd "$DOTS_DIR"
@@ -87,6 +95,9 @@ for pkg in "${PACKAGES[@]}"; do
     echo "==> stowing $pkg"
     stow -v --no-folding --adopt -t "$HOME" "$pkg"
 done
+
+install_tpm
+"$HOME/.tmux/plugins/tpm/bin/install_plugins" >/dev/null 2>&1 || true
 
 install_lsp_servers
 

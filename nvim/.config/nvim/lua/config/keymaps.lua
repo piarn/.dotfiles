@@ -1,10 +1,6 @@
 local map = vim.keymap.set
 
--- window navigation
-map("n", "<C-h>", "<C-w>h", { desc = "Go to left window" })
-map("n", "<C-j>", "<C-w>j", { desc = "Go to lower window" })
-map("n", "<C-k>", "<C-w>k", { desc = "Go to upper window" })
-map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
+-- window navigation is handled by plugins/tmux-navigator.lua (crosses into tmux panes too)
 
 -- move lines up/down
 map("n", "<A-j>", "<cmd>m .+1<cr>==", { desc = "Move line down" })
