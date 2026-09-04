@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash fish ghostty)
+PACKAGES=(bash fish ghostty git)
 
 install_stow() {
     if command -v stow >/dev/null 2>&1; then
