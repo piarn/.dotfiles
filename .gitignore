@@ -2,3 +2,6 @@
 fish_variables
 completions/
 local.fish
+
+# git
+git/.gitconfig.identity.work

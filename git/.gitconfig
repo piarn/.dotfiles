@@ -1,0 +1,20 @@
+[init]
+	defaultBranch = main
+
+[core]
+	editor = nvim
+
+[pull]
+	rebase = false
+
+[push]
+	autoSetupRemote = true
+
+[color]
+	ui = auto
+
+[include]
+	path = ~/.gitconfig.identity.github
+
+[includeIf "gitdir:~/projects/"]
+	path = ~/.gitconfig.identity.work
