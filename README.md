@@ -12,11 +12,17 @@ cd ~/.dots
 ./install.sh
 ```
 
-`install.sh` installs `stow` (apt/dnf) if missing, then symlinks each
-package into `$HOME`. It runs with `--adopt`, so any real file already
-sitting at a target path (e.g. an existing `~/.bashrc`) is moved into the
-repo first, then symlinked back — check `git diff` afterward and revert
-with `git checkout -- <file>` if the repo version should have won.
+`install.sh` installs whatever's missing from `.bootstrap/packages.txt`
+(apt/dnf), then symlinks each package into `$HOME`. It runs with `--adopt`,
+so any real file already sitting at a target path (e.g. an existing
+`~/.bashrc`) is moved into the repo first, then symlinked back — check
+`git diff` afterward and revert with `git checkout -- <file>` if the repo
+version should have won.
+
+`.bootstrap/` holds machine-setup helpers `install.sh` drives: system
+packages (`packages.txt`) and the one-time fish plugin-manager setup
+(`fish/install_fisher.sh`, `fish/install_bass.sh` — normally a no-op since
+the resulting plugin files are committed under `fish/.config/fish`).
 
 ## Adding a package
 
