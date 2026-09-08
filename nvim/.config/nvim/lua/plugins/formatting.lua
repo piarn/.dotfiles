@@ -1,6 +1,5 @@
 return {
   "stevearc/conform.nvim",
-  event = { "BufWritePre" },
   cmd = { "ConformInfo" },
   keys = {
     {
@@ -12,6 +11,7 @@ return {
     },
   },
   opts = {
+    -- format-on-save is off entirely; <leader>cf runs one of these on demand.
     formatters_by_ft = {
       go = { "goimports", "gofumpt" },
       python = { "ruff_format" },
@@ -20,10 +20,6 @@ return {
       rust = { "rustfmt" },
       nim = { "nimpretty" },
       sh = { "shfmt" },
-    },
-    format_on_save = {
-      timeout_ms = 500,
-      lsp_format = "fallback",
     },
   },
 }
