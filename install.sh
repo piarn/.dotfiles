@@ -4,17 +4,33 @@ set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGES=(bash fish ghostty git nvim tmux)
+BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 
-install_stow() {
-    if command -v stow >/dev/null 2>&1; then
+# Installs everything listed in .bootstrap/packages.txt (one binary/package
+# name per line, matching apt/dnf naming) that isn't already on PATH.
+install_packages() {
+    local pkgs=() pkg missing=()
+    while IFS= read -r pkg; do
+        case "$pkg" in ''|'#'*) continue ;; esac
+        pkgs+=("$pkg")
+    done <"$BOOTSTRAP_DIR/packages.txt"
+
+    for pkg in "${pkgs[@]}"; do
+        command -v "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+    done
+
+    if [ ${#missing[@]} -eq 0 ]; then
+        echo "==> packages already installed, nothing to do"
         return
     fi
+
+    echo "==> installing packages: ${missing[*]}"
     if command -v apt >/dev/null 2>&1; then
-        sudo apt update && sudo apt install -y stow
+        sudo apt update && sudo apt install -y "${missing[@]}"
     elif command -v dnf >/dev/null 2>&1; then
-        sudo dnf install -y stow
+        sudo dnf install -y "${missing[@]}"
     else
-        echo "error: stow not found and no supported package manager (apt/dnf) detected" >&2
+        echo "error: no supported package manager (apt/dnf) detected; install manually: ${missing[*]}" >&2
         exit 1
     fi
 }
@@ -87,7 +103,23 @@ install_tpm() {
     git clone https://github.com/tmux-plugins/tpm "$tpm_dir"
 }
 
-install_stow
+# fisher.fish and bass's function files are committed under fish/.config/fish
+# already (stow drops them straight in), so this is normally a no-op. It
+# only does real work — via the scripts in .bootstrap/fish — the first time
+# fish itself is set up on a machine, or if those tracked files are missing.
+install_fish_plugins() {
+    if ! command -v fish >/dev/null 2>&1; then
+        return
+    fi
+    if fish -c 'type -q fisher' >/dev/null 2>&1; then
+        return
+    fi
+    echo "==> bootstrapping fisher + plugins via .bootstrap/fish"
+    fish -c "source $BOOTSTRAP_DIR/fish/install_fisher.sh"
+    fish -c "source $BOOTSTRAP_DIR/fish/install_bass.sh"
+}
+
+install_packages
 install_node
 cd "$DOTS_DIR"
 
@@ -96,6 +128,7 @@ for pkg in "${PACKAGES[@]}"; do
     stow -v --no-folding --adopt -t "$HOME" "$pkg"
 done
 
+install_fish_plugins
 install_tpm
 "$HOME/.tmux/plugins/tpm/bin/install_plugins" >/dev/null 2>&1 || true
 
