@@ -74,7 +74,8 @@ NORMAL, after the leader:
 - `x` kill pane, `X` kill window (both confirm on the status line; stock `&`
   still kills the window too)
 - `c` new window, `n`/`p` next/previous, `1`-`0` by index, `w` chooser, `,` rename
-- `d` detach, `r` reload config, `S`/`R` resurrect save/restore
+- `d` detach, `r` reload config, `S` session manager (fzf popup: switch to a
+  running session or open/create one from a project dir)
 - arrows, `o` and `;` move between panes as they do in stock tmux
 - everything tmux binds by default that is not listed above (`%`, `[`, `?`, `t`,
   `f`, `o`, …) still works and also returns to NORMAL
