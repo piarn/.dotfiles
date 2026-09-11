@@ -4,3 +4,9 @@ eza
 zoxide
 fzf
 tmux
+bat
+ripgrep
+# apt/dnf package is fd-find; the binary it installs is fd on Fedora but
+# fdfind on Debian/Ubuntu (see fish/.../functions/_fzf_search_directory.fish),
+# so the command -v check below won't match on Fedora once already installed.
+fd-find

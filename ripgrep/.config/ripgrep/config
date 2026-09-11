@@ -1,0 +1,5 @@
+# One flag per line; requires RIPGREP_CONFIG_PATH (set in
+# fish/.config/fish/conf.d/00-env.fish) to point here.
+--smart-case
+--hidden
+--glob=!.git/*
