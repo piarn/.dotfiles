@@ -21,6 +21,8 @@ return {
         "jsonls",
         "rust_analyzer",
         "nim_langserver",
+        "dockerls",
+        "docker_compose_language_service",
       },
     },
   },
