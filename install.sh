@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd fish ghostty git nvim ripgrep tmux waybar yazi)
+PACKAGES=(bash bat fd fish ghostty git lazydocker lazygit nvim ripgrep tmux waybar yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 
 # Installs everything listed in .bootstrap/packages.txt (one binary/package
