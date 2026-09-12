@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Lock the screen with a blurred screenshot as the background.
+# Indicator/text/ring colors come from ~/.config/swaylock/config (Toxic
+# theme, see ~/.rice/swaylock).
+set -euo pipefail
+
+tmp="$(mktemp --suffix=.png)"
+trap 'rm -f "$tmp"' EXIT
+
+grim "$tmp"
+magick "$tmp" -scale 10% -blur 0x5 -scale 1000% "$tmp"
+
+swaylock -i "$tmp"
