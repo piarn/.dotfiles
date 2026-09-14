@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Wrapper for wofi: this desktop runs GNOME/mutter, not sway, so wofi's
+# wlr-layer-shell surface falls back to a plain Xwayland/GTK window and
+# picks up the desktop's GTK theme (Yaru) instead of ~/.rice/wofi/style.css.
+# Force a neutral base theme so wofi's own stylesheet (loaded automatically
+# from ~/.config/wofi/style.css) actually wins the cascade, and point
+# --style at it explicitly so there's no ambiguity about which file loads.
+export GTK_THEME=Adwaita
+exec /usr/bin/wofi --style "$HOME/.config/wofi/style.css" "$@"
