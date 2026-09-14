@@ -1,0 +1,44 @@
+**/.claude/settings.local.json
+
+# personal scratch files/scripts (not part of any repo's own .gitignore)
+az_*
+*_az_*
+*.az_*
+
+# OS cruft
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*~
+
+# editor/tool swap & backup files
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*.orig
+*.rej
+.netrwhist
+
+# editor project dirs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# env / secrets
+.env
+.env.local
+.envrc
+
+# logs
+*.log
+
+# direnv / nix
+.direnv/
