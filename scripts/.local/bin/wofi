@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Wrapper for wofi: this desktop runs GNOME/mutter, not sway, so wofi's
-# wlr-layer-shell surface falls back to a plain Xwayland/GTK window and
-# picks up the desktop's GTK theme (Yaru) instead of ~/.rice/wofi/style.css.
-# Force a neutral base theme so wofi's own stylesheet (loaded automatically
-# from ~/.config/wofi/style.css) actually wins the cascade, and point
-# --style at it explicitly so there's no ambiguity about which file loads.
+# Wrapper for wofi.
+#
+# ~/.config/wofi/style.css (stow symlink into ~/.dots) just @imports
+# ~/.rice/wofi/style.css with a relative path — but GTK resolves that
+# @import against the symlink's *real* target location, not the path it
+# was opened through, so the relative path doesn't land where it looks
+# like it should and the import silently fails. When that happens wofi
+# falls back to the ambient GTK theme (Adwaita/Yaru, plain white) instead
+# of the rice theme. Skip the indirection: point --style straight at the
+# rice file via an absolute, runtime-expanded $HOME path (CSS itself has
+# no way to expand $HOME, which is why the tracked style.css can't just
+# do this itself). Force a neutral base theme too, since anything the
+# rice stylesheet doesn't override should fall back to something neutral
+# rather than the desktop's own theme.
 export GTK_THEME=Adwaita
-exec /usr/bin/wofi --style "$HOME/.config/wofi/style.css" "$@"
+exec /usr/bin/wofi --style "$HOME/.rice/wofi/style.css" "$@"
