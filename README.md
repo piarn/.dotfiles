@@ -24,6 +24,18 @@ packages (`packages.txt`) and the one-time fish plugin-manager setup
 (`fish/install_fisher.sh`, `fish/install_bass.sh` — normally a no-op since
 the resulting plugin files are committed under `fish/.config/fish`).
 
+## .rice
+
+This repo owns *configs*; [`~/.rice`](https://github.com/piarn/.rice) owns
+the *styling* layer several of them include or symlink from — sway's
+colors/gaps/screen-layout, tmux/nvim/fish accents, and the
+yazi/lazygit/lazydocker/swaylock/firefox theme files. `install.sh` clones
+it to `~/.rice` if it isn't already there, renders the current theme
+(`~/.rice/bin/apply-theme`), and — if sway is already running — applies
+whichever screen layout matches what's connected
+(`~/.rice/bin/apply-layout --auto`). Both are safe to re-run any time; see
+`~/.rice/README.md` for how theming and screen layouts actually work.
+
 ## Adding a package
 
 ```

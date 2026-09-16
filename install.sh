@@ -3,8 +3,10 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish ghostty git lazydocker lazygit nvim ripgrep scripts swaylock tmux waybar yazi)
+PACKAGES=(bash bat fd firefox fish ghostty git lazydocker lazygit nvim ripgrep scripts sway swaylock tmux waybar yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
+RICE_DIR="$HOME/.rice"
+RICE_REPO="git@github.com:piarn/.rice.git"
 
 # Installs everything listed in .bootstrap/packages.txt (one binary/package
 # name per line, matching apt/dnf naming) that isn't already on PATH.
@@ -95,6 +97,22 @@ install_lsp_servers() {
         +qa 2>&1 | grep -Ev '^\[[a-zA-Z0-9._-]+\] +(log|fetch|status|checkout)' || true
 }
 
+# .dots owns configs; .rice owns the styling layer they include/symlink
+# from (sway gaps/colors/screen-layout, tmux/nvim/fish accents,
+# yazi/lazygit/lazydocker/swaylock/firefox theme files, ...). Clone it if
+# it's not already there, then render the current theme and — if sway is
+# actually running — apply the screen layout that matches what's connected.
+install_rice() {
+    if [ ! -d "$RICE_DIR/.git" ]; then
+        echo "==> cloning .rice"
+        git clone "$RICE_REPO" "$RICE_DIR"
+    fi
+    "$RICE_DIR/bin/apply-theme"
+    if command -v swaymsg >/dev/null 2>&1 && swaymsg -t get_version >/dev/null 2>&1; then
+        "$RICE_DIR/bin/apply-layout" --auto
+    fi
+}
+
 install_tpm() {
     local tpm_dir="$HOME/.tmux/plugins/tpm"
     if [ -d "$tpm_dir" ]; then
@@ -121,6 +139,7 @@ install_fish_plugins() {
 
 install_packages
 install_node
+install_rice
 cd "$DOTS_DIR"
 
 for pkg in "${PACKAGES[@]}"; do
