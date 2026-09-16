@@ -22,7 +22,21 @@ version should have won.
 `.bootstrap/` holds machine-setup helpers `install.sh` drives: system
 packages (`packages.txt`) and the one-time fish plugin-manager setup
 (`fish/install_fisher.sh`, `fish/install_bass.sh` — normally a no-op since
-the resulting plugin files are committed under `fish/.config/fish`).
+the resulting plugin files are committed under `fish/.config/fish`). A few
+`packages.txt` entries install a binary whose name doesn't match the
+package name (`ripgrep`→`rg`, `neovim`→`nvim`, `ImageMagick`→`magick`,
+`wl-clipboard`→`wl-copy`, `pulseaudio-utils`→`pactl`) or a differently-cased
+package name on apt (`ImageMagick`→`imagemagick`) — `install.sh` handles
+both via small override maps near the top.
+
+`yazi`, `lazygit` and `lazydocker` aren't packaged for apt/dnf at all, so
+`install.sh` downloads each straight from its project's latest GitHub
+release binary into `~/.local/bin` instead (skipped if already installed
+some other way — e.g. `lazydocker` via `go install`). `ghostty` has no
+apt/dnf package either, but unlike those three it also has no single
+portable Linux binary (its GTK4/libadwaita build depends on host library
+versions), so `install.sh` just warns with a link to
+https://ghostty.org/docs/install/binary instead of guessing.
 
 ## .rice
 

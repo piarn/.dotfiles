@@ -6,7 +6,21 @@ fzf
 tmux
 bat
 ripgrep
+unzip
 # apt/dnf package is fd-find; the binary it installs is fd on Fedora but
 # fdfind on Debian/Ubuntu (see fish/.../functions/_fzf_search_directory.fish),
 # so the command -v check below won't match on Fedora once already installed.
 fd-find
+
+# desktop stack (sway + friends)
+sway
+waybar
+wofi
+grim
+slurp
+wl-clipboard
+swaylock
+brightnessctl
+pulseaudio-utils
+neovim
+ImageMagick

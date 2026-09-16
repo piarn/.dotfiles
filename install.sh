@@ -8,17 +8,37 @@ BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
 RICE_REPO="git@github.com:piarn/.rice.git"
 
+# A few packages install a binary whose name doesn't match the package
+# name, so a plain `command -v <package>` never finds them and they'd get
+# re-installed (harmlessly, but noisily prompting for sudo) on every run.
+declare -A PACKAGE_BIN_OVERRIDES=(
+    [fd-find]=fd               # Fedora: package fd-find installs binary fd (Debian/Ubuntu: fdfind — see below)
+    [ImageMagick]=magick
+    [wl-clipboard]=wl-copy
+    [pulseaudio-utils]=pactl
+    [ripgrep]=rg
+    [neovim]=nvim
+)
+
+# apt uses a differently-cased name for ImageMagick; dnf uses the
+# packages.txt name as-is.
+declare -A APT_NAME_OVERRIDES=(
+    [ImageMagick]=imagemagick
+)
+
 # Installs everything listed in .bootstrap/packages.txt (one binary/package
-# name per line, matching apt/dnf naming) that isn't already on PATH.
+# name per line, matching dnf naming — see the override maps above for the
+# handful that need translating) that isn't already on PATH.
 install_packages() {
-    local pkgs=() pkg missing=()
+    local pkgs=() pkg missing=() probe
     while IFS= read -r pkg; do
         case "$pkg" in ''|'#'*) continue ;; esac
         pkgs+=("$pkg")
     done <"$BOOTSTRAP_DIR/packages.txt"
 
     for pkg in "${pkgs[@]}"; do
-        command -v "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+        probe="${PACKAGE_BIN_OVERRIDES[$pkg]:-$pkg}"
+        command -v "$probe" >/dev/null 2>&1 || missing+=("$pkg")
     done
 
     if [ ${#missing[@]} -eq 0 ]; then
@@ -28,7 +48,11 @@ install_packages() {
 
     echo "==> installing packages: ${missing[*]}"
     if command -v apt >/dev/null 2>&1; then
-        sudo apt update && sudo apt install -y "${missing[@]}"
+        local apt_pkgs=()
+        for pkg in "${missing[@]}"; do
+            apt_pkgs+=("${APT_NAME_OVERRIDES[$pkg]:-$pkg}")
+        done
+        sudo apt update && sudo apt install -y "${apt_pkgs[@]}"
     elif command -v dnf >/dev/null 2>&1; then
         sudo dnf install -y "${missing[@]}"
     else
@@ -113,6 +137,96 @@ install_rice() {
     fi
 }
 
+# yazi, lazygit and lazydocker aren't packaged for apt/dnf, so they're
+# installed straight from each project's GitHub release binaries instead.
+LOCAL_BIN="$HOME/.local/bin"
+
+case "$(uname -m)" in
+    x86_64) RELEASE_ARCH=x86_64; YAZI_ARCH=x86_64-unknown-linux-gnu ;;
+    aarch64) RELEASE_ARCH=arm64; YAZI_ARCH=aarch64-unknown-linux-gnu ;;
+    *) RELEASE_ARCH=""; YAZI_ARCH="" ;;
+esac
+
+# Installs $bin_name from the latest GitHub release of $repo whose asset
+# filename contains $asset_pattern: downloads it, extracts it (.tar.gz or
+# .zip), and copies every binary named in $bin_names (may be more than
+# one, e.g. yazi ships a "ya" companion binary) into ~/.local/bin. A no-op
+# if $bin_name is already on PATH, so safe to re-run any time.
+install_from_github_release() {
+    local bin_name="$1" repo="$2" asset_pattern="$3"
+    shift 3
+    local bin_names=("$@")
+
+    if command -v "$bin_name" >/dev/null 2>&1; then
+        return
+    fi
+    if [ -z "$asset_pattern" ]; then
+        echo "warning: unsupported CPU architecture ($(uname -m)) for $bin_name; install manually from https://github.com/$repo/releases" >&2
+        return
+    fi
+
+    echo "==> installing $bin_name from github.com/$repo (latest release)"
+    local url
+    url=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" \
+        | grep -o "\"browser_download_url\": *\"[^\"]*${asset_pattern}[^\"]*\"" \
+        | head -1 \
+        | sed -E 's/.*"(https[^"]+)"/\1/')
+    if [ -z "$url" ]; then
+        echo "warning: no $bin_name release asset matching '$asset_pattern' found; install manually from https://github.com/$repo/releases" >&2
+        return
+    fi
+
+    local tmp
+    tmp=$(mktemp -d)
+    curl -fsSL "$url" -o "$tmp/asset"
+    case "$url" in
+        *.tar.gz|*.tgz) tar -xzf "$tmp/asset" -C "$tmp" ;;
+        *.zip) unzip -q "$tmp/asset" -d "$tmp" ;;
+        *) echo "warning: unrecognized archive format for $bin_name: $url" >&2; rm -rf "$tmp"; return ;;
+    esac
+
+    mkdir -p "$LOCAL_BIN"
+    local name found=0
+    for name in "${bin_names[@]}"; do
+        local match
+        match=$(find "$tmp" -type f -name "$name" | head -1)
+        if [ -n "$match" ]; then
+            install -m755 "$match" "$LOCAL_BIN/$name"
+            found=1
+        fi
+    done
+    rm -rf "$tmp"
+
+    if [ "$found" -eq 0 ]; then
+        echo "warning: downloaded $bin_name release but found none of: ${bin_names[*]}" >&2
+    fi
+}
+
+install_yazi() {
+    install_from_github_release yazi sxyazi/yazi "${YAZI_ARCH}.zip" yazi ya
+}
+
+install_lazygit() {
+    install_from_github_release lazygit jesseduffield/lazygit "linux_${RELEASE_ARCH}.tar.gz" lazygit
+}
+
+install_lazydocker() {
+    install_from_github_release lazydocker jesseduffield/lazydocker "Linux_${RELEASE_ARCH}.tar.gz" lazydocker
+}
+
+# ghostty has no apt/dnf package on most distros and no single portable
+# Linux binary (its GTK4/libadwaita build depends on host library
+# versions), so unlike yazi/lazygit/lazydocker above it can't be safely
+# auto-installed here — just point at the docs instead.
+check_ghostty() {
+    if command -v ghostty >/dev/null 2>&1; then
+        return
+    fi
+    echo "warning: ghostty not found and can't be auto-installed on this distro." >&2
+    echo "         Install it manually: https://ghostty.org/docs/install/binary" >&2
+    echo "         (build from source instead: https://ghostty.org/docs/install/build)" >&2
+}
+
 install_tpm() {
     local tpm_dir="$HOME/.tmux/plugins/tpm"
     if [ -d "$tpm_dir" ]; then
@@ -140,6 +254,10 @@ install_fish_plugins() {
 install_packages
 install_node
 install_rice
+install_yazi
+install_lazygit
+install_lazydocker
+check_ghostty
 cd "$DOTS_DIR"
 
 for pkg in "${PACKAGES[@]}"; do
