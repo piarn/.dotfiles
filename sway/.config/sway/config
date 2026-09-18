@@ -109,7 +109,7 @@ exec_always ~/.rice/bin/layout-watch
     bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 
     # Lock the screen (blurred screenshot background, Toxic-themed indicator)
-    bindsym $mod+Escape exec lockscreen
+    bindsym $mod+Escape exec ~/.local/bin/lockscreen
 #
 # Moving around:
 #
@@ -176,8 +176,8 @@ exec_always ~/.rice/bin/layout-watch
     bindsym $mod+e layout toggle split
 
     # Make the current focus fullscreen
-    bindsym $mod+f fullscreen
-
+    bindsym $mod+Shift+f fullscreen
+    bindsym $mod+f resize set width 100 ppt; resize set height 100 ppt
     # Toggle the current focus between tiling and floating mode
     bindsym $mod+Shift+space floating toggle
 
@@ -233,8 +233,12 @@ bindsym $mod+r mode "resize"
     # Special keys to adjust brightness via brightnessctl
     bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
     bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
-    # Special key to take a screenshot with grim
-    bindsym Print exec grim
+    # Special key to take a screenshot with grim (full screen, ~/Pictures/Screenshots)
+    bindsym Print exec grim ~/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png
+    # Region screenshot: slurp for selection, saved + copied to clipboard.
+    # Annotation (swappy/Flameshot) was tried and hit dependency/portal
+    # dead ends on this box — see conversation history if revisiting.
+    bindsym $mod+Shift+s exec grim -g "$(slurp)" - | tee ~/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png | wl-copy
 
 #
 # Status Bar:
