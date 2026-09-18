@@ -82,6 +82,11 @@ exec_always ~/.rice/bin/layout-watch
 # You can also configure each device individually.
 # Read `man 5 sway-input` for more information about this section.
 
+input "type:keyboard" {
+    xkb_layout "lt"
+    xkb_variant "us"
+}
+
 ### Key bindings
 #
 # Basics:
