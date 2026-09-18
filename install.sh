@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish ghostty git lazydocker lazygit nvim ripgrep scripts sway swaylock tmux waybar yazi)
+PACKAGES=(bash bat fd firefox fish foot ghostty git lazydocker lazygit nvim ripgrep scripts sway swaylock tmux waybar yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
 RICE_REPO="git@github.com:piarn/.rice.git"
