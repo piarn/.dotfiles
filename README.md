@@ -1,7 +1,7 @@
 # .dotfiles
 
 Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level
-directory (`bash`, `fish`, `ghostty`, ...) is a stow package whose contents
+directory (`bash`, `fish`, `foot`, ...) is a stow package whose contents
 mirror `$HOME`.
 
 ## Setup
@@ -29,14 +29,10 @@ package name (`ripgrep`→`rg`, `neovim`→`nvim`, `ImageMagick`→`magick`,
 package name on apt (`ImageMagick`→`imagemagick`) — `install.sh` handles
 both via small override maps near the top.
 
-`yazi`, `lazygit` and `lazydocker` aren't packaged for apt/dnf at all, so
-`install.sh` downloads each straight from its project's latest GitHub
-release binary into `~/.local/bin` instead (skipped if already installed
-some other way — e.g. `lazydocker` via `go install`). `ghostty` has no
-apt/dnf package either, but unlike those three it also has no single
-portable Linux binary (its GTK4/libadwaita build depends on host library
-versions), so `install.sh` just warns with a link to
-https://ghostty.org/docs/install/binary instead of guessing.
+`yazi`, `lazygit`, `lazydocker` and `satty` aren't packaged for apt/dnf at
+all, so `install.sh` downloads each straight from its project's latest
+GitHub release binary into `~/.local/bin` instead (skipped if already
+installed some other way — e.g. `lazydocker` via `go install`).
 
 ## .rice
 
