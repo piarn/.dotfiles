@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish foot ghostty git lazydocker lazygit nvim ripgrep scripts sway swaylock tmux waybar yazi)
+PACKAGES=(bash bat fd firefox fish foot ghostty git lazydocker lazygit nvim quickshell ripgrep scripts sway swaylock tmux yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
 RICE_REPO="git@github.com:piarn/.rice.git"
@@ -206,6 +206,29 @@ install_yazi() {
     install_from_github_release yazi sxyazi/yazi "${YAZI_ARCH}.zip" yazi ya
 }
 
+# quickshell's bar uses a couple of Nerd Font icon glyphs (bluetooth on/off)
+# that no packaged font on Fedora/apt actually ships — "monospace" resolves
+# to a font with none of them. Nerd Fonts' own "symbols only" release is
+# just the icon glyphs, meant to be layered as a fallback alongside any
+# regular font (its bundled fontconfig snippet does that), rather than
+# replacing the whole terminal/UI font like a full patched font would.
+install_nerd_font_symbols() {
+    if fc-list 2>/dev/null | grep -q "Symbols Nerd Font Mono"; then
+        return
+    fi
+    echo "==> installing Symbols Nerd Font Mono (icons for quickshell's bar)"
+    local tmp font_dir="$HOME/.local/share/fonts/NerdFontSymbols"
+    tmp=$(mktemp -d)
+    curl -fsSL -o "$tmp/symbols.zip" \
+        https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.zip
+    unzip -q "$tmp/symbols.zip" -d "$tmp"
+    mkdir -p "$font_dir" "$HOME/.config/fontconfig/conf.d"
+    install -m644 "$tmp/SymbolsNerdFont-Regular.ttf" "$tmp/SymbolsNerdFontMono-Regular.ttf" "$font_dir/"
+    install -m644 "$tmp/10-nerd-font-symbols.conf" "$HOME/.config/fontconfig/conf.d/"
+    rm -rf "$tmp"
+    fc-cache -f "$font_dir" >/dev/null 2>&1
+}
+
 install_lazygit() {
     install_from_github_release lazygit jesseduffield/lazygit "linux_${RELEASE_ARCH}.tar.gz" lazygit
 }
@@ -254,6 +277,7 @@ install_fish_plugins() {
 install_packages
 install_node
 install_rice
+install_nerd_font_symbols
 install_yazi
 install_lazygit
 install_lazydocker
