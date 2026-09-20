@@ -21,6 +21,7 @@ quickshell
 grim
 slurp
 wl-clipboard
+swayidle
 brightnessctl
 pulseaudio-utils
 neovim
