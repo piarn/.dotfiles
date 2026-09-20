@@ -20,6 +20,7 @@ ShellRoot {
     BatteryMenu {}
     VolumeMenu {}
     MicMenu {}
+    NotificationCenter {}
     PowerMenu {}
     LockScreen {}
 }

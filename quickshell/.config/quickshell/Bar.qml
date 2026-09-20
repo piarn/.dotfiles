@@ -305,6 +305,44 @@ Variants {
                         onClicked: PopupState.toggle("battery")
                     }
                 }
+
+                // Same icon+dot shape as bluetooth above: bell color carries
+                // mute state (red when muted, matching bluetooth's
+                // powered-off red), the dot carries "is there anything to
+                // see" (solid/hollow, matching bluetooth's connected dot).
+                // Mute toggle lives inside the popup itself, not here.
+                Item {
+                    id: notifications
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: notifRow.implicitWidth
+                    height: notifRow.implicitHeight
+
+                    Row {
+                        id: notifRow
+                        spacing: 4
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.family: "Symbols Nerd Font Mono"
+                            font.pixelSize: 15
+                            color: NotificationState.muted ? Colors.red : Colors.acid
+                            text: NotificationState.muted ? "\u{f1f6}" : "\u{f0f3}"
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.family: "monospace"
+                            font.pixelSize: 11
+                            color: Colors.acid
+                            text: NotificationState.notifications.length > 0 ? "●" : "○"
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: PopupState.toggle("notifications")
+                    }
+                }
             }
         }
     }
