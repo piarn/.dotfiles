@@ -245,12 +245,12 @@ bindsym $mod+r mode "resize"
     # Special keys to adjust brightness via brightnessctl
     bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
     bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
-    # Special key to take a screenshot with grim (full screen, ~/Pictures/Screenshots)
-    bindsym Print exec grim ~/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png
-    # Region screenshot: slurp for selection, saved + copied to clipboard.
-    # Annotation (swappy/Flameshot) was tried and hit dependency/portal
-    # dead ends on this box — see conversation history if revisiting.
-    bindsym $mod+Shift+s exec grim -g "$(slurp)" - | tee ~/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png | wl-copy
+    # Full screen, straight to satty for annotation (crop/arrows/blur/
+    # numbered markers/text/undo) — Enter saves + copies, see
+    # ~/.rice/satty for the save location/theming.
+    bindsym Print exec grim - | satty --filename -
+    # Region screenshot: slurp for selection, then the same satty step.
+    bindsym $mod+Shift+s exec grim -g "$(slurp)" - | satty --filename -
 
 #
 # Status Bar:

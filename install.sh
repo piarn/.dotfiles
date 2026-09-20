@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish foot ghostty git lazydocker lazygit nvim quickshell ripgrep scripts sway swaylock tmux yazi)
+PACKAGES=(bash bat fd firefox fish foot ghostty git lazydocker lazygit nvim quickshell ripgrep satty scripts sway swaylock tmux yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
 RICE_REPO="git@github.com:piarn/.rice.git"
@@ -206,6 +206,13 @@ install_yazi() {
     install_from_github_release yazi sxyazi/yazi "${YAZI_ARCH}.zip" yazi ya
 }
 
+# No apt/dnf package on Fedora or Debian/Ubuntu; ships a prebuilt glibc
+# binary using the same target-triple naming as yazi's release assets, so
+# $YAZI_ARCH (e.g. "x86_64-unknown-linux-gnu") doubles as satty's too.
+install_satty() {
+    install_from_github_release satty Satty-org/Satty "${YAZI_ARCH}.tar.gz" satty
+}
+
 # quickshell's bar uses a couple of Nerd Font icon glyphs (bluetooth on/off)
 # that no packaged font on Fedora/apt actually ships — "monospace" resolves
 # to a font with none of them. Nerd Fonts' own "symbols only" release is
@@ -279,6 +286,7 @@ install_node
 install_rice
 install_nerd_font_symbols
 install_yazi
+install_satty
 install_lazygit
 install_lazydocker
 check_ghostty
