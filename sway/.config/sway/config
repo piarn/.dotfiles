@@ -56,16 +56,23 @@ exec_always ~/.local/bin/bluetooth-agent
 
 ### Idle configuration
 #
-# Example configuration:
+# Lock (never suspend) after 10 minutes idle — the lock alone protects
+# against someone walking up to an unattended session; an idle-triggered
+# suspend risks losing unsaved work if something goes wrong on resume, so
+# this deliberately doesn't do that (see also `output * power off`, left
+# out for the same reason: it's one more thing that can fail to come back).
 #
-# exec swayidle -w \
-#          timeout 300 'qs ipc call lock lock' \
-#          timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
-#          before-sleep 'qs ipc call lock lock'
+# `before-sleep` covers both an explicit suspend and a lid close — logind's
+# default HandleLidSwitch=suspend routes a lid close through the same
+# PrepareForSleep signal swayidle listens for, so one hook covers both
+# without a separate lid-specific handler.
 #
-# This will lock your screen after 300 seconds of inactivity, then turn off
-# your displays after another 300 seconds, and turn your screens back on when
-# resumed. It will also lock your screen before your computer goes to sleep.
+# Plain `exec` (not exec_always): swayidle should start once at sway's
+# initial startup and keep running across `$mod+Shift+c` reloads, not get a
+# second instance spawned on every reload the way exec_always would.
+exec swayidle -w \
+         timeout 600 'qs ipc call lock lock' \
+         before-sleep 'qs ipc call lock lock'
 
 ### Input configuration
 #
