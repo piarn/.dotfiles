@@ -12,6 +12,7 @@ QtObject {
         battery: () => BatteryState.menuOpen,
         volume: () => VolumeState.volumeMenuOpen,
         mic: () => VolumeState.micMenuOpen,
+        notifications: () => NotificationState.menuOpen,
     })
 
     readonly property var _set: ({
@@ -20,6 +21,7 @@ QtObject {
         battery: (v) => BatteryState.menuOpen = v,
         volume: (v) => VolumeState.volumeMenuOpen = v,
         mic: (v) => VolumeState.micMenuOpen = v,
+        notifications: (v) => NotificationState.menuOpen = v,
     })
 
     function toggle(name) {
