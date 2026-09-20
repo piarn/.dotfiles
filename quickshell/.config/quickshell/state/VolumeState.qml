@@ -17,9 +17,24 @@ Item {
     readonly property var sinkAudio: Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.audio : null
     readonly property var sourceAudio: Pipewire.defaultAudioSource ? Pipewire.defaultAudioSource.audio : null
 
+    // Pipewire.nodes carries every node pipewire knows about — playback
+    // streams (individual apps), capture streams, and the actual hardware
+    // sinks/sources. isStream filters out the former; sources additionally
+    // drop each sink's ".monitor" node, which is a source in pipewire's eyes
+    // but not one a person would ever want as their mic.
+    readonly property var sinks: Pipewire.nodes.values.filter(n => n.isSink && !n.isStream)
+    readonly property var sources: Pipewire.nodes.values.filter(n =>
+        !n.isSink && !n.isStream && (n.type & PwNodeType.AudioSource) && !n.name.endsWith(".monitor"))
+
     PwObjectTracker {
         objects: [Pipewire.defaultAudioSink, Pipewire.defaultAudioSource]
     }
+
+    // Writing the "preferred" node (rather than defaultAudioSink/-Source,
+    // which are read-only — they just reflect whatever the preferred one
+    // resolves to) is what actually asks wireplumber to switch.
+    function setSink(node) { Pipewire.preferredDefaultAudioSink = node }
+    function setSource(node) { Pipewire.preferredDefaultAudioSource = node }
 
     function speakerIcon() {
         if (!root.sinkAudio) return "\u{f0581}"

@@ -102,13 +102,40 @@ PanelWindow {
 
             Rectangle { width: parent.width; height: 1; color: Colors.dim }
 
+            Item {
+                width: parent.width
+                height: scanLabel.implicitHeight
+                visible: BluetoothState.powered
+
+                Text {
+                    anchors.left: parent.left
+                    font.family: "monospace"
+                    font.pixelSize: 12
+                    color: Colors.gray
+                    text: BluetoothState.scanning ? "scanning…" : "devices"
+                }
+                Text {
+                    id: scanLabel
+                    anchors.right: parent.right
+                    font.family: "monospace"
+                    font.pixelSize: 12
+                    color: BluetoothState.scanning ? Colors.gray : Colors.acid
+                    text: "[scan]"
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !BluetoothState.scanning
+                        onClicked: BluetoothState.scan()
+                    }
+                }
+            }
+
             Text {
                 width: parent.width
                 visible: BluetoothState.powered && BluetoothState.devices.length === 0
                 font.family: "monospace"
                 font.pixelSize: 12
                 color: Colors.gray
-                text: "no paired devices"
+                text: "no devices — try [scan]"
             }
 
             Text {
@@ -117,7 +144,7 @@ PanelWindow {
                 font.family: "monospace"
                 font.pixelSize: 12
                 color: Colors.gray
-                text: "turn bluetooth on to see paired devices"
+                text: "turn bluetooth on to see devices"
                 wrapMode: Text.Wrap
             }
 
@@ -138,28 +165,52 @@ PanelWindow {
 
                         Text {
                             anchors.left: parent.left
+                            anchors.right: actions.left
                             anchors.leftMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: "monospace"
-                            font.pixelSize: 13
-                            color: modelData.connected ? Colors.neon : Colors.fg
-                            text: (modelData.connected ? "🔗 " : "  ") + modelData.name
-                        }
-
-                        Text {
-                            anchors.right: parent.right
                             anchors.rightMargin: 6
                             anchors.verticalCenter: parent.verticalCenter
                             font.family: "monospace"
-                            font.pixelSize: 12
-                            color: Colors.acid
-                            text: modelData.connected ? "[disconnect]" : "[connect]"
+                            font.pixelSize: 13
+                            color: modelData.connected ? Colors.neon : (modelData.paired ? Colors.fg : Colors.gray)
+                            elide: Text.ElideRight
+                            text: (modelData.connected ? "🔗 " : "  ") + modelData.name
+                        }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: modelData.connected
-                                    ? BluetoothState.disconnectFrom(modelData.mac)
-                                    : BluetoothState.connectTo(modelData.mac)
+                        Row {
+                            id: actions
+                            anchors.right: parent.right
+                            anchors.rightMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+
+                            // Only offered when paired-but-not-connected: a
+                            // link key gone stale (bluez error
+                            // "br-connection-key-missing") makes connect()
+                            // fail forever until the device is removed and
+                            // re-paired from scratch.
+                            Text {
+                                visible: modelData.paired && !modelData.connected
+                                font.family: "monospace"
+                                font.pixelSize: 12
+                                color: Colors.gray
+                                text: "[forget]"
+                                MouseArea { anchors.fill: parent; onClicked: BluetoothState.forget(modelData.mac) }
+                            }
+
+                            Text {
+                                font.family: "monospace"
+                                font.pixelSize: 12
+                                color: Colors.acid
+                                text: modelData.connected ? "[disconnect]" : (modelData.paired ? "[connect]" : "[pair]")
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        if (modelData.connected) BluetoothState.disconnectFrom(modelData.mac)
+                                        else if (modelData.paired) BluetoothState.connectTo(modelData.mac)
+                                        else BluetoothState.pair(modelData.mac)
+                                    }
+                                }
                             }
                         }
                     }

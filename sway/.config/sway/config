@@ -41,6 +41,13 @@ include ~/.rice/sway/outputs.conf
 # instance already holds it, so this stays deduplicated across reloads.
 exec_always ~/.rice/bin/layout-watch
 #
+# Register a bluetooth pairing agent for the whole session — nothing else
+# here does (no blueman/GNOME shell), so without this, bluetooth devices
+# pair but drop right after connecting (see the script for why).
+# exec_always is safe here too: the script exits immediately if one's
+# already running.
+exec_always ~/.local/bin/bluetooth-agent
+#
 # Example configuration:
 #
 #   output HDMI-A-1 resolution 1920x1080 position 1920,0

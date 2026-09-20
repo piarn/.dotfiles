@@ -150,41 +150,15 @@ Variants {
                         }
                     }
 
+                    // No hover tooltip here — a plain child Rectangle
+                    // anchored below the icon gets clipped by the bar's own
+                    // 32px-tall surface (Wayland layer-shell surfaces can't
+                    // draw outside their own bounds), so it never showed
+                    // more than a 1px sliver of its border. The same detail
+                    // (SSID/signal/IP) is one click away in NetworkMenu.
                     MouseArea {
                         anchors.fill: parent
-                        hoverEnabled: true
-                        onEntered: tooltip.visible = true
-                        onExited: tooltip.visible = false
                         onClicked: PopupState.toggle("network")
-                    }
-
-                    Rectangle {
-                        id: tooltip
-                        visible: false
-                        color: Colors.black
-                        border.color: Colors.dim
-                        border.width: 1
-                        radius: 4
-                        width: tooltipLabel.implicitWidth + 16
-                        height: tooltipLabel.implicitHeight + 12
-                        anchors.top: parent.bottom
-                        anchors.topMargin: 6
-                        anchors.right: parent.right
-
-                        Text {
-                            id: tooltipLabel
-                            anchors.centerIn: parent
-                            font.family: "monospace"
-                            font.pixelSize: 12
-                            color: Colors.fg
-                            text: {
-                                if (NetworkState.kind === "wifi")
-                                    return "SSID: " + NetworkState.ssid + " (" + NetworkState.signal + "%)" + "\nDevice: " + NetworkState.device + "\nIP: " + (NetworkState.ip || "—") + "\n(click for networks)"
-                                if (NetworkState.kind === "eth")
-                                    return "Device: " + NetworkState.device + "\nIP: " + (NetworkState.ip || "—") + "\n(click for networks)"
-                                return "No active connection\n(click for networks)"
-                            }
-                        }
                     }
                 }
 
@@ -193,6 +167,8 @@ Variants {
                     anchors.verticalCenter: parent.verticalCenter
                     width: bluetoothRow.implicitWidth
                     height: bluetoothRow.implicitHeight
+
+                    readonly property var connectedDevices: BluetoothState.devices.filter(d => d.connected)
 
                     Row {
                         id: bluetoothRow
@@ -207,23 +183,34 @@ Variants {
                             anchors.verticalCenter: parent.verticalCenter
                             font.family: "Symbols Nerd Font Mono"
                             font.pixelSize: 15
-                            color: BluetoothState.powered ? Colors.neon : Colors.red
+                            color: BluetoothState.powered ? Colors.acid : Colors.red
                             text: BluetoothState.powered ? "\u{f00af}" : "\u{f00b2}"
                         }
 
+                        // A connected/disconnected indicator (filled/hollow
+                        // dot) rather than the device's name — the name is
+                        // still one hover away via the tooltip, or a click
+                        // away in the full popup. Hidden entirely when
+                        // bluetooth itself is off, since the main icon
+                        // already turns red for that. Plain Unicode dots
+                        // instead of nerd font glyphs (e.g. check/xmark) —
+                        // those render at noticeably different visual
+                        // weights from each other at the same pixelSize.
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             font.family: "monospace"
-                            font.pixelSize: 13
-                            color: Colors.fg
-                            visible: text !== ""
-                            text: {
-                                const connected = BluetoothState.devices.filter(d => d.connected)
-                                return connected.length > 0 ? connected[0].name : ""
-                            }
+                            font.pixelSize: 11
+                            color: Colors.acid
+                            visible: BluetoothState.powered
+                            text: bluetooth.connectedDevices.length > 0 ? "●" : "○"
                         }
                     }
 
+                    // No hover tooltip here — see NetworkMenu's identical
+                    // fix above: a plain child Rectangle below the icon gets
+                    // clipped by the bar's own 32px-tall surface, so it
+                    // never showed more than a sliver of its border. Device
+                    // names are one click away in BluetoothMenu.
                     MouseArea {
                         anchors.fill: parent
                         onClicked: PopupState.toggle("bluetooth")
