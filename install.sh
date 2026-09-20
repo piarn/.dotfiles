@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish foot ghostty git lazydocker lazygit nvim quickshell ripgrep satty scripts sway swaylock tmux yazi)
+PACKAGES=(bash bat fd firefox fish foot git lazydocker lazygit nvim quickshell ripgrep satty scripts sway swaylock tmux yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
 RICE_REPO="git@github.com:piarn/.rice.git"
@@ -244,19 +244,6 @@ install_lazydocker() {
     install_from_github_release lazydocker jesseduffield/lazydocker "Linux_${RELEASE_ARCH}.tar.gz" lazydocker
 }
 
-# ghostty has no apt/dnf package on most distros and no single portable
-# Linux binary (its GTK4/libadwaita build depends on host library
-# versions), so unlike yazi/lazygit/lazydocker above it can't be safely
-# auto-installed here — just point at the docs instead.
-check_ghostty() {
-    if command -v ghostty >/dev/null 2>&1; then
-        return
-    fi
-    echo "warning: ghostty not found and can't be auto-installed on this distro." >&2
-    echo "         Install it manually: https://ghostty.org/docs/install/binary" >&2
-    echo "         (build from source instead: https://ghostty.org/docs/install/build)" >&2
-}
-
 install_tpm() {
     local tpm_dir="$HOME/.tmux/plugins/tpm"
     if [ -d "$tpm_dir" ]; then
@@ -289,7 +276,6 @@ install_yazi
 install_satty
 install_lazygit
 install_lazydocker
-check_ghostty
 cd "$DOTS_DIR"
 
 for pkg in "${PACKAGES[@]}"; do
