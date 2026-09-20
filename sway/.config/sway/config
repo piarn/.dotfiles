@@ -17,13 +17,9 @@ set $right l
 set $term ghostty
 # Your preferred application launcher
 #
-# Absolute path, not "wofi" via $PATH: sway's own PATH is whatever the
-# display manager/systemd user session set (no ~/.local/bin in it — that
-# only gets added inside interactive fish shells), so a bare `wofi` skips
-# the ~/.local/bin/wofi wrapper that forces GTK_THEME=Adwaita and points
-# --style at ~/.rice/wofi/style.css, and you get the raw desktop GTK theme
-# instead.
-set $menu exec ~/.local/bin/wofi --show drun
+# Toggles the quickshell launcher panel (see ~/.dots/quickshell) via its
+# IPC target, rather than spawning a new process each time.
+set $menu exec qs ipc call launcher toggle
 
 ### Theme (~/.rice)
 include ~/.rice/sway/theme.conf
@@ -44,6 +40,13 @@ include ~/.rice/sway/outputs.conf
 # daemon takes an exclusive lock and exits immediately if another
 # instance already holds it, so this stays deduplicated across reloads.
 exec_always ~/.rice/bin/layout-watch
+#
+# Register a bluetooth pairing agent for the whole session — nothing else
+# here does (no blueman/GNOME shell), so without this, bluetooth devices
+# pair but drop right after connecting (see the script for why).
+# exec_always is safe here too: the script exits immediately if one's
+# already running.
+exec_always ~/.local/bin/bluetooth-agent
 #
 # Example configuration:
 #
@@ -115,6 +118,10 @@ input "type:keyboard" {
 
     # Lock the screen (blurred screenshot background, Toxic-themed indicator)
     bindsym $mod+Escape exec ~/.local/bin/lockscreen
+
+    # Power menu (lock/suspend/reboot/shutdown/logout) — the deliberate next
+    # step up from Mod+Escape's direct lock
+    bindsym $mod+Shift+Escape exec qs ipc call powermenu toggle
 #
 # Moving around:
 #
@@ -249,7 +256,12 @@ bindsym $mod+r mode "resize"
 # Status Bar:
 #
 # swaybar can't center a module (clock) or lay out network/battery — using
-# waybar instead, configured (Toxic theme included) in ~/.dots/waybar.
-exec waybar
+# quickshell instead (also provides the app launcher above), configured
+# (Toxic theme included) in ~/.dots/quickshell. QML2_IMPORT_PATH makes
+# `import quickshell` in its QML resolve to ~/.rice/quickshell's Colors
+# singleton — see the comment atop ~/.rice/templates/quickshell/Colors.qml.tmpl.
+# `-n` skips spawning a duplicate if one's already running, so `exec_always`
+# (needed to survive `$mod+Shift+c` reloads) doesn't pile up processes.
+exec_always env QML2_IMPORT_PATH=$HOME/.rice quickshell -n
 
 include /etc/sway/config.d/*

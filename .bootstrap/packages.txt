@@ -15,8 +15,9 @@ fd-find
 # desktop stack (sway + friends)
 foot
 sway
-waybar
-wofi
+# bar + launcher (~/.dots/quickshell); confirmed in Fedora's own repos
+# (dnf), not verified on apt-based distros
+quickshell
 grim
 slurp
 wl-clipboard
