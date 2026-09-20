@@ -59,9 +59,9 @@ exec_always ~/.local/bin/bluetooth-agent
 # Example configuration:
 #
 # exec swayidle -w \
-#          timeout 300 'swaylock -f -c 000000' \
+#          timeout 300 'qs ipc call lock lock' \
 #          timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
-#          before-sleep 'swaylock -f -c 000000'
+#          before-sleep 'qs ipc call lock lock'
 #
 # This will lock your screen after 300 seconds of inactivity, then turn off
 # your displays after another 300 seconds, and turn your screens back on when
@@ -116,8 +116,10 @@ input "type:keyboard" {
     # Exit sway (logs you out of your Wayland session)
     bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 
-    # Lock the screen (blurred screenshot background, Toxic-themed indicator)
-    bindsym $mod+Escape exec ~/.local/bin/lockscreen
+    # Lock the screen — quickshell's own session-lock surface (Toxic-themed,
+    # blurred screenshot background), see
+    # ~/.dots/quickshell/.config/quickshell/popups/LockScreen.qml
+    bindsym $mod+Escape exec qs ipc call lock lock
 
     # Power menu (lock/suspend/reboot/shutdown/logout) — the deliberate next
     # step up from Mod+Escape's direct lock

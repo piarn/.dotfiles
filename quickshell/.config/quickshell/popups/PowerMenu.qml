@@ -24,7 +24,7 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 
     readonly property var actions: [
-        { label: "lock", icon: "\u{f023}", run: () => Quickshell.execDetached(["sh", "-c", "$HOME/.local/bin/lockscreen"]) },
+        { label: "lock", icon: "\u{f023}", run: () => Quickshell.execDetached(["qs", "ipc", "call", "lock", "lock"]) },
         { label: "suspend", icon: "\u{f04b2}", run: () => Quickshell.execDetached(["systemctl", "suspend"]) },
         { label: "reboot", icon: "\u{f0709}", run: () => Quickshell.execDetached(["systemctl", "reboot"]) },
         { label: "shutdown", icon: "\u{f011}", run: () => Quickshell.execDetached(["systemctl", "poweroff"]) },
