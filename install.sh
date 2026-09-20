@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish foot git lazydocker lazygit nvim quickshell ripgrep satty scripts sway swaylock tmux yazi)
+PACKAGES=(bash bat fd firefox fish foot git lazydocker lazygit nvim quickshell ripgrep satty scripts sway tmux yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
 RICE_REPO="git@github.com:piarn/.rice.git"
@@ -123,7 +123,7 @@ install_lsp_servers() {
 
 # .dots owns configs; .rice owns the styling layer they include/symlink
 # from (sway gaps/colors/screen-layout, tmux/nvim/fish accents,
-# yazi/lazygit/lazydocker/swaylock/firefox theme files, ...). Clone it if
+# yazi/lazygit/lazydocker/firefox theme files, ...). Clone it if
 # it's not already there, then render the current theme and — if sway is
 # actually running — apply the screen layout that matches what's connected.
 install_rice() {
@@ -236,6 +236,25 @@ install_nerd_font_symbols() {
     fc-cache -f "$font_dir" >/dev/null 2>&1
 }
 
+# quickshell's lock screen (~/.dots/quickshell/.config/quickshell/popups/LockScreen.qml)
+# authenticates via PamContext against its own PAM service rather than
+# reusing "login"'s (heavier than needed — session/selinux rules meant for
+# actual logins, not a screen unlock) or swaylock's (a package this repo no
+# longer installs). `auth include login` mirrors what swaylock's own
+# /etc/pam.d/swaylock did: reuse the distro's normal auth stack (so e.g.
+# fprintd fallback still works if system-auth is set up for it) without
+# pulling in login's non-auth rules. A system file, so this needs sudo;
+# idempotent and safe to re-run.
+install_pam_lock_config() {
+    local pam_file="/etc/pam.d/quickshell-lock"
+    local content='auth include login'
+    if [ -f "$pam_file" ] && [ "$(cat "$pam_file" 2>/dev/null)" = "$content" ]; then
+        return
+    fi
+    echo "==> installing $pam_file"
+    echo "$content" | sudo tee "$pam_file" >/dev/null
+}
+
 install_lazygit() {
     install_from_github_release lazygit jesseduffield/lazygit "linux_${RELEASE_ARCH}.tar.gz" lazygit
 }
@@ -272,6 +291,7 @@ install_packages
 install_node
 install_rice
 install_nerd_font_symbols
+install_pam_lock_config
 install_yazi
 install_satty
 install_lazygit

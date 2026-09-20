@@ -21,4 +21,5 @@ ShellRoot {
     VolumeMenu {}
     MicMenu {}
     PowerMenu {}
+    LockScreen {}
 }

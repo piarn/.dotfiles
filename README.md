@@ -39,7 +39,7 @@ installed some other way — e.g. `lazydocker` via `go install`).
 This repo owns *configs*; [`~/.rice`](https://github.com/piarn/.rice) owns
 the *styling* layer several of them include or symlink from — sway's
 colors/gaps/screen-layout, tmux/nvim/fish accents, and the
-yazi/lazygit/lazydocker/swaylock/firefox theme files. `install.sh` clones
+yazi/lazygit/lazydocker/firefox theme files. `install.sh` clones
 it to `~/.rice` if it isn't already there, renders the current theme
 (`~/.rice/bin/apply-theme`), and — if sway is already running — applies
 whichever screen layout matches what's connected
