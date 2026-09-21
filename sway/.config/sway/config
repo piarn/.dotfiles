@@ -13,13 +13,28 @@ set $left h
 set $down j
 set $up k
 set $right l
+
+# Cursor theme — without this, nothing sets XCURSOR_THEME, and wlroots
+# can't resolve the custom-cursor requests GTK/Chromium issue on
+# image/canvas hover, so the pointer just disappears there instead of
+# falling back to a default arrow. This sets wlroots' own cursor manager;
+# see ~/.config/environment.d/cursor.conf for the env vars GTK/Xwayland
+# apps need too (must be set before sway starts, so it can't live here).
+seat seat0 xcursor_theme Adwaita 24
 # Your preferred terminal emulator
 set $term foot
 # Your preferred application launcher
 #
+# `qs` (quickshell) links against Qt's private ABI and must run against the
+# exact Qt build it was compiled with — Qt 6.8.0 via aqtinstall under ~/Qt,
+# not the system Qt package (see the exec_always below). Sway's own PATH has
+# no ~/.local/bin to reach a wrapper for this, so every `qs` invocation below
+# sets LD_LIBRARY_PATH itself. Bump the version if quickshell is rebuilt
+# against a newer Qt.
+set $qs env LD_LIBRARY_PATH=$HOME/Qt/6.8.0/gcc_64/lib qs
 # Toggles the quickshell launcher panel (see ~/.dots/quickshell) via its
 # IPC target, rather than spawning a new process each time.
-set $menu exec qs ipc call launcher toggle
+set $menu exec $qs ipc call launcher toggle
 
 ### Theme (~/.rice)
 include ~/.rice/sway/theme.conf
@@ -71,8 +86,8 @@ exec_always ~/.local/bin/bluetooth-agent
 # initial startup and keep running across `$mod+Shift+c` reloads, not get a
 # second instance spawned on every reload the way exec_always would.
 exec swayidle -w \
-         timeout 600 'qs ipc call lock lock' \
-         before-sleep 'qs ipc call lock lock'
+         timeout 600 '$qs ipc call lock lock' \
+         before-sleep '$qs ipc call lock lock'
 
 ### Input configuration
 #
@@ -126,11 +141,11 @@ input "type:keyboard" {
     # Lock the screen — quickshell's own session-lock surface (Toxic-themed,
     # blurred screenshot background), see
     # ~/.dots/quickshell/.config/quickshell/popups/LockScreen.qml
-    bindsym $mod+Escape exec qs ipc call lock lock
+    bindsym $mod+Escape exec $qs ipc call lock lock
 
     # Power menu (lock/suspend/reboot/shutdown/logout) — the deliberate next
     # step up from Mod+Escape's direct lock
-    bindsym $mod+Shift+Escape exec qs ipc call powermenu toggle
+    bindsym $mod+Shift+Escape exec $qs ipc call powermenu toggle
 #
 # Moving around:
 #
@@ -271,6 +286,12 @@ bindsym $mod+r mode "resize"
 # singleton — see the comment atop ~/.rice/templates/quickshell/Colors.qml.tmpl.
 # `-n` skips spawning a duplicate if one's already running, so `exec_always`
 # (needed to survive `$mod+Shift+c` reloads) doesn't pile up processes.
-exec_always env QML2_IMPORT_PATH=$HOME/.rice quickshell -n
+# LD_LIBRARY_PATH is required because quickshell links against Qt's private
+# ABI (see quickshell's BUILD.md) and must run against the exact Qt build it
+# was compiled with — here Qt 6.8.0 via aqtinstall under ~/Qt, not the
+# system Qt package. Sway's own PATH has no ~/.local/bin, so it can't reach
+# a PATH-based wrapper for this; set the search path here instead. Bump the
+# version below whenever quickshell is rebuilt against a newer Qt.
+exec_always env QML2_IMPORT_PATH=$HOME/.rice LD_LIBRARY_PATH=$HOME/Qt/6.8.0/gcc_64/lib quickshell -n
 
 include /etc/sway/config.d/*
