@@ -26,4 +26,3 @@ swayidle
 brightnessctl
 pulseaudio-utils
 neovim
-ImageMagick

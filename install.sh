@@ -13,18 +13,15 @@ RICE_REPO="git@github.com:piarn/.rice.git"
 # re-installed (harmlessly, but noisily prompting for sudo) on every run.
 declare -A PACKAGE_BIN_OVERRIDES=(
     [fd-find]=fd               # Fedora: package fd-find installs binary fd (Debian/Ubuntu: fdfind — see below)
-    [ImageMagick]=magick
     [wl-clipboard]=wl-copy
     [pulseaudio-utils]=pactl
     [ripgrep]=rg
     [neovim]=nvim
 )
 
-# apt uses a differently-cased name for ImageMagick; dnf uses the
-# packages.txt name as-is.
-declare -A APT_NAME_OVERRIDES=(
-    [ImageMagick]=imagemagick
-)
+# apt sometimes uses a differently-cased/named package than dnf's
+# packages.txt name — add an entry here when that happens.
+declare -A APT_NAME_OVERRIDES=()
 
 # Installs everything listed in .bootstrap/packages.txt (one binary/package
 # name per line, matching dnf naming — see the override maps above for the

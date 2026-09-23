@@ -24,10 +24,9 @@ packages (`packages.txt`) and the one-time fish plugin-manager setup
 (`fish/install_fisher.sh`, `fish/install_bass.sh` — normally a no-op since
 the resulting plugin files are committed under `fish/.config/fish`). A few
 `packages.txt` entries install a binary whose name doesn't match the
-package name (`ripgrep`→`rg`, `neovim`→`nvim`, `ImageMagick`→`magick`,
-`wl-clipboard`→`wl-copy`, `pulseaudio-utils`→`pactl`) or a differently-cased
-package name on apt (`ImageMagick`→`imagemagick`) — `install.sh` handles
-both via small override maps near the top.
+package name (`ripgrep`→`rg`, `neovim`→`nvim`, `wl-clipboard`→`wl-copy`,
+`pulseaudio-utils`→`pactl`) or a differently-cased package name on apt —
+`install.sh` handles both via small override maps near the top.
 
 `yazi`, `lazygit`, `lazydocker` and `satty` aren't packaged for apt/dnf at
 all, so `install.sh` downloads each straight from its project's latest

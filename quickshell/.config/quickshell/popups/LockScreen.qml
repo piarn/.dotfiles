@@ -15,10 +15,6 @@
 // keybinding anywhere in this file: unlike Launcher/PowerMenu, this is a
 // security surface, so the only way out is a correct password.
 //
-// Background: locking is instant (sets locked=true immediately, no waiting
-// on a screenshot); ~/.dots/scripts/.local/bin/lock-wallpaper then runs
-// detached to blur a per-output screenshot into place a moment later, same
-// two-step the old lockscreen script did in one blocking shot.
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -27,12 +23,12 @@ import QtQuick
 import quickshell
 
 // Non-visual wrapper: WlSessionLock's own default property is `surface`
-// (a single Component, not a generic child list), so the PamContext/Process/
+// (a single Component, not a generic child list), so the PamContext/
 // IpcHandler below have to live as its siblings rather than its children —
 // nesting them inside WlSessionLock silently drops them (no QML error, they
 // just never get created). Item has the generic "data" default property
 // that holds arbitrary children, same reason state/BluetoothState.qml's
-// singleton is an Item rather than a QtObject (it also has Process children).
+// singleton is an Item rather than a QtObject.
 Item {
     id: root
 
@@ -46,7 +42,6 @@ Item {
     property bool unlockInProgress: false
     property bool showFailure: false
     property string statusMessage: ""
-    property int wallpaperGeneration: 0
 
     function tryUnlock() {
         if (currentText === "" || unlockInProgress) return
@@ -63,7 +58,6 @@ Item {
                 root.currentText = ""
                 root.showFailure = false
                 root.statusMessage = ""
-                wallpaperGen.running = true
             }
         }
 
@@ -73,30 +67,6 @@ Item {
                 color: Colors.black
 
                 onVisibleChanged: if (visible) Qt.callLater(() => passwordInput.forceActiveFocus())
-
-                Image {
-                    anchors.fill: parent
-                    fillMode: Image.PreserveAspectCrop
-                    cache: false
-                    asynchronous: true
-                    // surface.screen is null for a moment during surface creation,
-                    // before the compositor assigns it — guard rather than let the
-                    // binding throw (it'd still self-heal once screenChanged fires,
-                    // since screen was read either way, but a thrown binding is a
-                    // needless warning on every single lock).
-                    source: surface.screen
-                        ? "file://" + (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp")
-                            + "/quickshell-lock/" + surface.screen.name + ".png?" + root.wallpaperGeneration
-                        : ""
-                    opacity: status === Image.Ready ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 300 } }
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: Colors.black
-                    opacity: 0.45
-                }
 
                 Column {
                     anchors.centerIn: parent
@@ -199,12 +169,6 @@ Item {
                 }
             }
         }
-    }
-
-    Process {
-        id: wallpaperGen
-        command: ["bash", "-lc", "~/.local/bin/lock-wallpaper"]
-        onExited: root.wallpaperGeneration = Date.now()
     }
 
     PamContext {
