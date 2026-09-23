@@ -137,8 +137,14 @@ input "type:keyboard" {
     # mouse button for dragging.
     floating_modifier $mod normal
 
-    # Reload the configuration file
-    bindsym $mod+Shift+c reload
+    # Reload the configuration file. Also kills quickshell first: its
+    # exec_always line only spawns a new instance when none is running
+    # (see the `-n` flag below), so a plain `reload` never picks up
+    # changes to ~/.dots/quickshell's QML on its own — whether it does
+    # depends on quickshell's own hot-reload, which isn't consistent
+    # across versions/machines. Killing it here makes `$mod+Shift+c`
+    # reliably reload quickshell too, everywhere.
+    bindsym $mod+Shift+c exec $qs kill -n; reload
 
     # Exit sway (logs you out of your Wayland session)
     bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
