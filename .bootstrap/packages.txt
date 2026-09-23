@@ -14,6 +14,7 @@ fd-find
 
 # desktop stack (sway + friends)
 foot
+kitty
 sway
 # bar + launcher (~/.dots/quickshell); confirmed in Fedora's own repos
 # (dnf), not verified on apt-based distros
