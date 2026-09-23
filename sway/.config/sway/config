@@ -21,8 +21,11 @@ set $right l
 # see ~/.config/environment.d/cursor.conf for the env vars GTK/Xwayland
 # apps need too (must be set before sway starts, so it can't live here).
 seat seat0 xcursor_theme Adwaita 24
-# Your preferred terminal emulator
-set $term foot
+# Your preferred terminal emulator — kitty is primary (live theme reload via
+# reload_config_on_change), foot stays for quick/lightweight launches (see
+# $mod+Shift+Return below) since it's the lighter of the two.
+set $term kitty
+set $term_fast foot
 # Your preferred application launcher
 #
 # `qs` (quickshell) links against Qt's private ABI and must run against the
@@ -118,6 +121,8 @@ input "type:keyboard" {
 #
     # Start a terminal
     bindsym $mod+Return exec $term
+    # Start the lightweight terminal (foot) for quick/throwaway launches
+    bindsym $mod+Shift+Return exec $term_fast
 
     # Kill focused window
     bindsym $mod+Shift+q kill
