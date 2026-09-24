@@ -22,6 +22,7 @@ quickshell
 grim
 wf-recorder
 cliphist
+wlsunset
 slurp
 wl-clipboard
 swayidle

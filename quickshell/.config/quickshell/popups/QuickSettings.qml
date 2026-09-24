@@ -3,8 +3,8 @@
 //    — the bar has no tray of its own, like Windows' hidden-icons flyout.
 //    Left click activates (menu-only items open their menu), right click
 //    opens the menu, middle click is the secondary action, wheel scrolls.
-//  - toggles: wi-fi, bluetooth, do not disturb, keep awake, power profile;
-//    the › on a tile opens that feature's full popup
+//  - toggles: wi-fi, bluetooth, do not disturb, keep awake, night light,
+//    power profile; the › on a tile opens that feature's full popup
 //  - volume/mic/brightness sliders (middle click mutes, wheel steps); the
 //    chevron before volume/mic lists the output/input devices to pick from
 //  - battery, lock and power
@@ -189,6 +189,16 @@ BarPopup {
             subtitle: IdleState.inhibit ? "no idle lock" : "off"
             active: IdleState.inhibit
             onToggled: IdleState.inhibit = !IdleState.inhibit
+        }
+
+        ToggleTile {
+            width: menu.tileWidth
+            icon: "\u{f0594}"
+            title: "Night light"
+            subtitle: !NightLightState.available ? "install wlsunset"
+                : NightLightState.active ? NightLightState.temperature + "K" : "off"
+            active: NightLightState.active
+            onToggled: if (NightLightState.available) NightLightState.active = !NightLightState.active
         }
 
         ToggleTile {
