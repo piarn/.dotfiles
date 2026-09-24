@@ -1,12 +1,10 @@
-// Just a popup-visibility flag — unlike NetworkState/BluetoothState there's
-// nothing to poll here, UPower's own singleton (Quickshell.Services.UPower)
-// is already reactive, so Bar.qml and BatteryMenu.qml both read it directly.
+// Battery icon tiers. Nothing to poll here: UPower's own singleton
+// (Quickshell.Services.UPower) is already reactive, so Bar.qml and
+// BatteryMenu.qml both read it directly.
 pragma Singleton
 import QtQuick
 
 QtObject {
-    property bool menuOpen: false
-
     function icon(pct, charging) {
         const chargingIcons = { 10: "\u{f089c}", 20: "\u{f0086}", 30: "\u{f0087}", 40: "\u{f0088}",
             50: "\u{f089d}", 60: "\u{f0089}", 70: "\u{f089e}", 80: "\u{f008a}", 90: "\u{f008b}" }

@@ -1,13 +1,17 @@
 // Status bar, replacing waybar. One PanelWindow per screen (Variants), with
-// sway workspaces on the left, a clock centered, and network/battery on the
-// right — same layout waybar had (see ~/.dots/waybar's old config.jsonc in
-// git history). Colors from the rice theme via the Colors singleton.
+// sway workspaces on the left, a clock centered, and status widgets on the
+// right ending in the ≡ tray/quick-settings button. Each widget opens its
+// popup on this bar's own screen. Colors from the rice theme via the Colors
+// singleton.
 import Quickshell
 import Quickshell.I3
+import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
+import Quickshell.Wayland
 import QtQuick
 import quickshell
 import "./state"
+import "./components"
 
 Variants {
     model: Quickshell.screens
@@ -28,6 +32,22 @@ Variants {
         // pills (workspaces, clock, widgets) paint a background, so the
         // wallpaper shows through everywhere else along the strip.
         readonly property int pillHeight: 24
+
+        // Clicking empty bar space (or the clock) closes an open popup;
+        // widgets and workspace buttons sit above this and get their own
+        // clicks first.
+        MouseArea {
+            anchors.fill: parent
+            enabled: PopupState.current !== ""
+            onClicked: PopupState.close()
+        }
+
+        // Quick settings' "keep awake": the bar is always mapped, which is
+        // what the idle-inhibit protocol needs from the inhibiting surface.
+        IdleInhibitor {
+            window: bar
+            enabled: IdleState.inhibit
+        }
 
         Rectangle {
             anchors.left: parent.left
@@ -66,7 +86,10 @@ Variants {
 
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: modelData.activate()
+                            onClicked: {
+                                PopupState.close()
+                                modelData.activate()
+                            }
                         }
                     }
                 }
@@ -112,236 +135,60 @@ Variants {
                 anchors.centerIn: parent
                 spacing: 16
 
-                Item {
-                    id: network
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: netLabel.implicitWidth
-                    height: netLabel.implicitHeight
-
-                    // Live status is polled once in the NetworkState singleton (not
-                    // here — this Item used to poll nmcli itself, which meant one
-                    // poller *per screen* under Variants) and shared with the
-                    // NetworkMenu.qml popup this opens on click. Signal strength
-                    // itself only shows in that popup now — this is icon-only.
-                    function wifiIcon(pct) {
-                        if (pct >= 75) return "\u{f0928}"
-                        if (pct >= 50) return "\u{f0925}"
-                        if (pct >= 25) return "\u{f0922}"
-                        return "\u{f091f}"
-                    }
-
-                    Text {
-                        id: netLabel
-                        font.family: "Symbols Nerd Font Mono"
-                        font.pixelSize: 15
-                        color: {
-                            if (NetworkState.kind === "wifi") {
-                                if (NetworkState.signal < 25) return Colors.red
-                                if (NetworkState.signal < 50) return Colors.amber
-                                return Colors.acid
-                            }
-                            if (NetworkState.kind === "eth") return Colors.acid
-                            return Colors.red
-                        }
-                        text: {
-                            if (NetworkState.kind === "wifi") return network.wifiIcon(NetworkState.signal)
-                            if (NetworkState.kind === "eth") return "\u{f0200}"
-                            return "\u{f092d}"
-                        }
-                    }
-
-                    // No hover tooltip here — a plain child Rectangle
-                    // anchored below the icon gets clipped by the bar's own
-                    // 32px-tall surface (Wayland layer-shell surfaces can't
-                    // draw outside their own bounds), so it never showed
-                    // more than a 1px sliver of its border. The same detail
-                    // (SSID/signal/IP) is one click away in NetworkMenu.
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: PopupState.toggle("network")
-                    }
-                }
-
-                Item {
-                    id: bluetooth
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: bluetoothRow.implicitWidth
-                    height: bluetoothRow.implicitHeight
-
-                    readonly property var connectedDevices: BluetoothState.devices.filter(d => d.connected)
-
-                    Row {
-                        id: bluetoothRow
-                        spacing: 4
-
-                        // Nerd Font glyphs (md-bluetooth / md-bluetooth_off) —
-                        // needs ~/.local/share/fonts/NerdFontSymbols installed
-                        // (see ~/.rice/README.md's quickshell entry);
-                        // "monospace" alone has no bluetooth icon of any kind,
-                        // patched or otherwise.
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: "Symbols Nerd Font Mono"
-                            font.pixelSize: 15
-                            color: BluetoothState.powered ? Colors.acid : Colors.red
-                            text: BluetoothState.powered ? "\u{f00af}" : "\u{f00b2}"
-                        }
-
-                        // A connected/disconnected indicator (filled/hollow
-                        // dot) rather than the device's name — the name is
-                        // still one hover away via the tooltip, or a click
-                        // away in the full popup. Hidden entirely when
-                        // bluetooth itself is off, since the main icon
-                        // already turns red for that. Plain Unicode dots
-                        // instead of nerd font glyphs (e.g. check/xmark) —
-                        // those render at noticeably different visual
-                        // weights from each other at the same pixelSize.
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: "monospace"
-                            font.pixelSize: 11
-                            color: Colors.acid
-                            visible: BluetoothState.powered
-                            text: bluetooth.connectedDevices.length > 0 ? "●" : "○"
-                        }
-                    }
-
-                    // No hover tooltip here — see NetworkMenu's identical
-                    // fix above: a plain child Rectangle below the icon gets
-                    // clipped by the bar's own 32px-tall surface, so it
-                    // never showed more than a sliver of its border. Device
-                    // names are one click away in BluetoothMenu.
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: PopupState.toggle("bluetooth")
-                    }
-                }
-
-                Item {
-                    id: volume
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: volumeIcon.implicitWidth
-                    height: volumeIcon.implicitHeight
-
-                    Text {
-                        id: volumeIcon
-                        font.family: "Symbols Nerd Font Mono"
-                        font.pixelSize: 15
-                        color: VolumeState.sinkAudio && VolumeState.sinkAudio.muted ? Colors.red : Colors.acid
-                        text: VolumeState.speakerIcon()
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                        onClicked: (mouse) => {
-                            if (mouse.button === Qt.MiddleButton) {
-                                if (VolumeState.sinkAudio) VolumeState.sinkAudio.muted = !VolumeState.sinkAudio.muted
-                            } else {
-                                PopupState.toggle("volume")
-                            }
-                        }
-                        onWheel: (wheel) => VolumeState.adjustVolume(wheel.angleDelta.y > 0 ? 0.05 : -0.05)
-                    }
-                }
-
-                Item {
-                    id: mic
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: micIcon.implicitWidth
-                    height: micIcon.implicitHeight
-
-                    Text {
-                        id: micIcon
-                        font.family: "Symbols Nerd Font Mono"
-                        font.pixelSize: 15
-                        color: VolumeState.sourceAudio && VolumeState.sourceAudio.muted ? Colors.red : Colors.acid
-                        text: VolumeState.micIcon()
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                        onClicked: (mouse) => {
-                            if (mouse.button === Qt.MiddleButton) {
-                                if (VolumeState.sourceAudio) VolumeState.sourceAudio.muted = !VolumeState.sourceAudio.muted
-                            } else {
-                                PopupState.toggle("mic")
-                            }
-                        }
-                        onWheel: (wheel) => VolumeState.adjustMicVolume(wheel.angleDelta.y > 0 ? 0.05 : -0.05)
-                    }
-                }
-
-                Item {
-                    id: battery
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: batteryIcon.implicitWidth
-                    height: batteryIcon.implicitHeight
-                    visible: UPower.displayDevice.isLaptopBattery
-
-                    // Percentage/state/time-remaining moved to BatteryMenu.qml
-                    // (click to open) — this is icon-only, tiered by charge
-                    // level and charging state (see BatteryState.icon()).
-                    Text {
-                        id: batteryIcon
-                        font.family: "Symbols Nerd Font Mono"
-                        font.pixelSize: 15
-                        color: {
-                            const pct = UPower.displayDevice.percentage * 100
-                            const charging = UPower.displayDevice.state === UPowerDeviceState.Charging
-                            if (pct <= 15 && !charging) return Colors.red
-                            if (pct <= 30) return Colors.amber
+                // Icon follows the *primary* device (lowest-metric default
+                // route), i.e. where traffic actually goes; every interface is
+                // listed in NetworkMenu. VPN glyph appended while one is up.
+                BarWidget {
+                    screen: bar.modelData
+                    popup: "network"
+                    icon: NetworkState.icon(NetworkState.primary) + (NetworkState.vpnActive ? " \u{f0582}" : "")
+                    iconColor: {
+                        if (NetworkState.kind === "wifi") {
+                            if (NetworkState.signal < 25) return Colors.red
+                            if (NetworkState.signal < 50) return Colors.amber
                             return Colors.acid
                         }
-                        text: BatteryState.icon(
-                            UPower.displayDevice.percentage * 100,
-                            UPower.displayDevice.state === UPowerDeviceState.Charging
-                        )
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: PopupState.toggle("battery")
+                        return NetworkState.kind === "eth" ? Colors.acid : Colors.red
                     }
                 }
 
-                // Same icon+dot shape as bluetooth above: bell color carries
-                // mute state (red when muted, matching bluetooth's
-                // powered-off red), the dot carries "is there anything to
-                // see" (solid/hollow, matching bluetooth's connected dot).
-                // Mute toggle lives inside the popup itself, not here.
-                Item {
-                    id: notifications
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: notifRow.implicitWidth
-                    height: notifRow.implicitHeight
+                // Dot: something connected. Hidden when off, since the icon
+                // already turns red for that.
+                BarWidget {
+                    screen: bar.modelData
+                    popup: "bluetooth"
+                    icon: BluetoothState.powered ? "\u{f00af}" : "\u{f00b2}"
+                    iconColor: BluetoothState.powered ? Colors.acid : Colors.red
+                    showDot: BluetoothState.powered
+                    dotFilled: BluetoothState.connectedDevices.length > 0
+                }
 
-                    Row {
-                        id: notifRow
-                        spacing: 4
+                BarWidget {
+                    readonly property real pct: UPower.displayDevice.percentage * 100
+                    readonly property bool charging: UPower.displayDevice.state === UPowerDeviceState.Charging
+                    visible: UPower.displayDevice.isLaptopBattery
+                    screen: bar.modelData
+                    popup: "battery"
+                    icon: BatteryState.icon(pct, charging)
+                    iconColor: pct <= 15 && !charging ? Colors.red : pct <= 30 ? Colors.amber : Colors.acid
+                }
 
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: "Symbols Nerd Font Mono"
-                            font.pixelSize: 15
-                            color: NotificationState.muted ? Colors.red : Colors.acid
-                            text: NotificationState.muted ? "\u{f1f6}" : "\u{f0f3}"
-                        }
+                // Bell color carries do-not-disturb, the dot "anything to read".
+                BarWidget {
+                    screen: bar.modelData
+                    popup: "notifications"
+                    icon: NotificationState.dnd ? "\u{f009b}" : "\u{f009a}"
+                    iconColor: NotificationState.dnd ? Colors.red : Colors.acid
+                    showDot: true
+                    dotFilled: NotificationState.notifications.length > 0
+                }
 
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: "monospace"
-                            font.pixelSize: 11
-                            color: Colors.acid
-                            text: NotificationState.notifications.length > 0 ? "●" : "○"
-                        }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: PopupState.toggle("notifications")
-                    }
+                // Tray + quick settings. Amber while a tray app wants attention.
+                BarWidget {
+                    screen: bar.modelData
+                    popup: "quicksettings"
+                    icon: "\u{f035c}"
+                    iconColor: SystemTray.items.values.some(i => i.status === Status.NeedsAttention) ? Colors.amber : Colors.acid
                 }
             }
         }
