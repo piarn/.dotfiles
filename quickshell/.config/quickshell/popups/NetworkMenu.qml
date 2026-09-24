@@ -6,8 +6,10 @@
 //  - vpn: NetworkManager vpn/wireguard profiles (hidden when there are none)
 //  - wi-fi: nearby networks, click to connect; asks for a password up front
 //    for secured networks with no saved profile instead of failing first
-// Anything deeper (static IPs, DNS, 802.1X) goes to [settings], which opens
-// nm-connection-editor.
+// Enterprise (802.1X) networks take a username + password (PEAP/MSCHAPv2),
+// and [hidden] joins a network that doesn't broadcast its SSID. Anything
+// deeper (static IPs, DNS, certificates, WEP) goes to [settings], which
+// opens nm-connection-editor.
 import QtQuick
 import quickshell
 import "../state"
@@ -19,10 +21,14 @@ BarPopup {
     fixedWidth: 400
 
     property string lastAttempted: ""
-    property var pwNet: null   // network whose password row is open
-    readonly property string pwFor: pwNet ? pwNet.ssid : ""
-    // exclusive keyboard while typing a password or searching, see CardWindow
-    needsKeyboard: pwFor !== "" || searching
+    // Network whose credentials form is open: a wifiNetworks entry, or
+    // {hidden: true} for [hidden].
+    property var pwNet: null
+    readonly property bool credsOpen: pwNet !== null
+    readonly property bool credsHidden: credsOpen && !!pwNet.hidden
+    readonly property bool credsEnterprise: credsOpen && /802\.1X/.test(pwNet.security || "")
+    // exclusive keyboard while typing credentials or searching, see CardWindow
+    needsKeyboard: credsOpen || searching
     property bool searching: false
 
     readonly property var shownNetworks: {
@@ -44,8 +50,8 @@ BarPopup {
 
     function clickNetwork(net) {
         if (net.active) return
-        // Enterprise (802.1X) and WEP need more than a password field.
-        if (!net.known && /802\.1X|WEP/.test(net.security)) {
+        // WEP needs more than a password field.
+        if (!net.known && /WEP/.test(net.security)) {
             NetworkState.openEditor()
             close()
             return
@@ -59,12 +65,20 @@ BarPopup {
         NetworkState.connectWifi(net)
     }
 
-    function submitPassword(password) {
-        if (!password || !pwNet) return
-        const net = pwNet
+    function openHidden() {
+        pwNet = { hidden: true, ssid: "", security: "" }
+    }
+
+    function submitCredentials() {
+        if (!pwNet) return
+        const password = pwField.text
+        const identity = credsEnterprise ? userField.text.trim() : ""
+        const net = credsHidden ? { hidden: true, ssid: ssidField.text.trim(), security: "" } : pwNet
+        // hidden: SSID required, password optional (open network)
+        if (!net.ssid || (credsEnterprise && !identity) || (!credsHidden && !password)) return
         lastAttempted = net.ssid
         pwNet = null
-        NetworkState.connectWifi(net, password)
+        NetworkState.connectWifi(net, password, identity)
     }
 
     function cancelPassword() {
@@ -91,9 +105,13 @@ BarPopup {
         return dev.state
     }
 
-    onPwForChanged: {
-        pwInput.text = ""
-        if (pwFor) Qt.callLater(() => pwInput.forceActiveFocus())
+    onPwNetChanged: {
+        ssidField.text = ""
+        userField.text = ""
+        pwField.text = ""
+        if (!pwNet) return
+        const first = credsHidden ? ssidField : credsEnterprise ? userField : pwField
+        Qt.callLater(() => first.input.forceActiveFocus())
     }
 
     onOpened: {
@@ -112,7 +130,7 @@ BarPopup {
         function onActionStatusChanged() {
             if (NetworkState.actionStatus.startsWith("failed") && menu.lastAttempted) {
                 const net = NetworkState.wifiNetworks.find(n => n.ssid === menu.lastAttempted)
-                if (net && net.security && !/802\.1X|WEP/.test(net.security)) menu.pwNet = net
+                if (net && net.security && !/WEP/.test(net.security)) menu.pwNet = net
                 menu.lastAttempted = ""
             } else if (NetworkState.actionStatus === "") {
                 menu.lastAttempted = ""
@@ -341,13 +359,22 @@ BarPopup {
                 text: !NetworkState.wifiEnabled ? "wi-fi is off"
                     : NetworkState.scanning ? "wi-fi · scanning…" : "wi-fi networks"
             }
-            TextButton {
-                id: rescanBtn
+            Row {
                 anchors.right: parent.right
+                spacing: 10
                 visible: NetworkState.wifiEnabled
-                label: "rescan"
-                enabled: !NetworkState.scanning
-                onClicked: NetworkState.scan()
+
+                TextButton {
+                    label: "hidden"
+                    baseColor: Colors.gray2
+                    onClicked: menu.openHidden()
+                }
+                TextButton {
+                    id: rescanBtn
+                    label: "rescan"
+                    enabled: !NetworkState.scanning
+                    onClicked: NetworkState.scan()
+                }
             }
         }
 
@@ -540,63 +567,59 @@ BarPopup {
         // Outside the Repeater on purpose: wifiNetworks is replaced on
         // every refresh, which rebuilds the delegates and would wipe a
         // half-typed password (and its focus) if the input lived there.
-        MonoText {
-            visible: menu.pwFor !== ""
+        Column {
+            visible: menu.credsOpen
+            width: parent.width
             leftPadding: 8
             topPadding: 4
-            font.pixelSize: 11
-            color: Colors.gray2
-            text: "password for " + menu.pwFor
-        }
+            spacing: 6
 
-        Row {
-            visible: menu.pwFor !== ""
-            leftPadding: 8
-            spacing: 8
+            MonoText {
+                font.pixelSize: 11
+                color: Colors.gray2
+                text: menu.credsHidden ? "join a hidden network (no password = open)"
+                    : menu.credsEnterprise ? "sign in to " + (menu.pwNet ? menu.pwNet.ssid : "") + " (PEAP)"
+                    : "password for " + (menu.pwNet ? menu.pwNet.ssid : "")
+            }
 
-            Rectangle {
-                width: 200
-                height: 24
-                radius: 3
-                color: Colors.surface
-                border.color: pwInput.activeFocus ? Colors.neon : Colors.dim
-                border.width: 1
+            InputField {
+                id: ssidField
+                visible: menu.credsHidden
+                placeholder: "network name (SSID)"
+                input.KeyNavigation.tab: pwField.input
+                onAccepted: menu.submitCredentials()
+                onEscaped: menu.cancelPassword()
+            }
+            InputField {
+                id: userField
+                visible: menu.credsEnterprise
+                placeholder: "username"
+                input.KeyNavigation.tab: pwField.input
+                onAccepted: menu.submitCredentials()
+                onEscaped: menu.cancelPassword()
+            }
 
-                TextInput {
-                    id: pwInput
-                    anchors.fill: parent
-                    anchors.leftMargin: 6
-                    anchors.rightMargin: 6
-                    verticalAlignment: TextInput.AlignVCenter
-                    font.family: "monospace"
-                    font.pixelSize: 12
-                    color: Colors.fg
-                    clip: true
-                    echoMode: TextInput.Password
-                    Keys.onReturnPressed: menu.submitPassword(text)
-                    Keys.onEnterPressed: menu.submitPassword(text)
-                    Keys.onEscapePressed: menu.cancelPassword()
+            Row {
+                spacing: 8
+
+                InputField {
+                    id: pwField
+                    placeholder: "password"
+                    password: true
+                    onAccepted: menu.submitCredentials()
+                    onEscaped: menu.cancelPassword()
                 }
-
-                MonoText {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 6
+                TextButton {
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: pwInput.text === ""
-                    color: Colors.gray
-                    text: "password"
+                    label: "connect"
+                    onClicked: menu.submitCredentials()
                 }
-            }
-            TextButton {
-                anchors.verticalCenter: parent.verticalCenter
-                label: "connect"
-                onClicked: menu.submitPassword(pwInput.text)
-            }
-            TextButton {
-                anchors.verticalCenter: parent.verticalCenter
-                label: "cancel"
-                baseColor: Colors.gray2
-                onClicked: menu.cancelPassword()
+                TextButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    label: "cancel"
+                    baseColor: Colors.gray2
+                    onClicked: menu.cancelPassword()
+                }
             }
         }
     }

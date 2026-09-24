@@ -136,39 +136,66 @@ Item {
         `, "sh", String(primaryMetric), dev.uuid, dev.device].concat(others))
     }
 
-    // Saved or open networks: activate as-is. With a password: set it on
-    // the saved profile (or a new one) through `nmcli connection edit`'s
-    // stdin rather than `nmcli ... password X` — argv is world-readable in
-    // /proc/<pid>/cmdline for as long as nmcli runs. The password arrives
-    // on the script's stdin, and printf is a shell builtin (never its own
-    // process). A profile created here is deleted
-    // again if activation fails, like `nmcli device wifi connect` does.
-    function connectWifi(net, password) {
+    // Saved or open networks: activate as-is. Otherwise create/update the
+    // profile and bring it up:
+    //  - WPA/WPA3 personal: `password` is the PSK
+    //  - enterprise (802.1X): `identity` + `password`, PEAP/MSCHAPv2 — what
+    //    nearly every office RADIUS setup uses. No CA certificate is
+    //    pinned (like GNOME's "No CA certificate is required"), so the
+    //    server isn't authenticated; anything fancier (TLS certs, TTLS,
+    //    CA pinning) goes through nm-connection-editor.
+    //  - hidden (`net.hidden`): open, or WPA-PSK when a password is given
+    // Secrets go through `nmcli connection edit`'s stdin rather than
+    // `nmcli ... password X` — argv is world-readable in /proc/<pid>/cmdline
+    // for as long as nmcli runs. The secret arrives on the script's stdin,
+    // and printf is a shell builtin (never its own process). A profile
+    // created here is deleted again if activation fails, like `nmcli device
+    // wifi connect` does.
+    function connectWifi(net, password, identity) {
         const uuids = savedSsids[net.ssid] || []
         const ifname = wifiDevice ? wifiDevice.device : ""
-        if (!password) {
+        if (!password && !net.hidden) {
             if (uuids.length) run("connecting to " + net.ssid, ["nmcli", "connection", "up", "uuid", uuids[0]].concat(ifname ? ["ifname", ifname] : []))
             else run("connecting to " + net.ssid, ["nmcli", "device", "wifi", "connect", net.ssid].concat(ifname ? ["ifname", ifname] : []))
             return
         }
         // WPA3-only networks need SAE; mixed WPA2/WPA3 accept plain PSK.
-        const keyMgmt = /WPA3/.test(net.security) && !/WPA[12]/.test(net.security) ? "sae" : "wpa-psk"
+        const keyMgmt = identity ? "wpa-eap"
+            : net.hidden ? (password ? "wpa-psk" : "")
+            : /WPA3/.test(net.security) && !/WPA[12]/.test(net.security) ? "sae" : "wpa-psk"
         run("connecting to " + net.ssid, ["sh", "-c", `
-            IFS= read -r psk
-            uuid=$1; ssid=$2; ifname=$3; km=$4; created=
+            IFS= read -r secret
+            uuid=$1; ssid=$2; ifname=$3; km=$4; identity=$5; hidden=$6; created=
             if [ -z "$uuid" ]; then
-                out=$(nmcli connection add type wifi con-name "$ssid" ssid "$ssid" wifi-sec.key-mgmt "$km") || exit 1
+                set -- type wifi con-name "$ssid" ssid "$ssid"
+                [ "$hidden" = yes ] && set -- "$@" 802-11-wireless.hidden yes
+                case $km in
+                    '') ;;
+                    # NM refuses PEAP without an identity, and it isn't secret
+                    wpa-eap) set -- "$@" wifi-sec.key-mgmt wpa-eap 802-1x.eap peap 802-1x.phase2-auth mschapv2 802-1x.identity "$identity" ;;
+                    *) set -- "$@" wifi-sec.key-mgmt "$km" ;;
+                esac
+                out=$(nmcli connection add "$@") || exit 1
                 uuid=$(printf '%s' "$out" | sed -n 's/.*(\\([0-9a-f-]*\\)).*/\\1/p')
                 [ -n "$uuid" ] || { echo "could not create profile" >&2; exit 1; }
                 created=1
             fi
-            printf 'set 802-11-wireless-security.psk %s\\nsave persistent\\nquit\\n' "$psk" \\
-                | nmcli connection edit uuid "$uuid" >/dev/null 2>&1
+            if [ -n "$secret" ] || [ -n "$identity" ]; then
+                {
+                    if [ "$km" = wpa-eap ]; then
+                        printf 'set 802-1x.identity %s\\n' "$identity"
+                        printf 'set 802-1x.password %s\\n' "$secret"
+                    else
+                        printf 'set 802-11-wireless-security.psk %s\\n' "$secret"
+                    fi
+                    printf 'save persistent\\nquit\\n'
+                } | nmcli connection edit uuid "$uuid" >/dev/null 2>&1
+            fi
             if [ -n "$ifname" ]; then nmcli connection up uuid "$uuid" ifname "$ifname"
             else nmcli connection up uuid "$uuid"; fi && exit 0
             [ -n "$created" ] && nmcli connection delete uuid "$uuid" >/dev/null 2>&1
             exit 1
-        `, "sh", uuids[0] || "", net.ssid, ifname, keyMgmt], password)
+        `, "sh", uuids[0] || "", net.ssid, ifname, keyMgmt, identity || "", net.hidden ? "yes" : "no"], password || "")
     }
 
     function forgetWifi(ssid) {
