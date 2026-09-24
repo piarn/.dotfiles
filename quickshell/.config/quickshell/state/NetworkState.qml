@@ -89,14 +89,17 @@ Item {
         return out
     }
 
-    function run(label, cmd, env) {
+    // `input` (optional) is written to the command's stdin — how secrets
+    // reach it without showing up in argv.
+    function run(label, cmd, input) {
         if (actionProc.running) {
             actionStatus = "busy — wait for the previous action"
             return
         }
         actionStatus = label + "…"
         actionProc.label = label
-        actionProc.environment = env || {}
+        actionProc.input = input || ""
+        actionProc.stdinEnabled = actionProc.input !== ""
         actionProc.command = cmd
         actionProc.running = true
     }
@@ -136,9 +139,9 @@ Item {
     // Saved or open networks: activate as-is. With a password: set it on
     // the saved profile (or a new one) through `nmcli connection edit`'s
     // stdin rather than `nmcli ... password X` — argv is world-readable in
-    // /proc/<pid>/cmdline for as long as nmcli runs, while the environment
-    // variable carrying it here is owner-only, and printf is a shell
-    // builtin (never its own process). A profile created here is deleted
+    // /proc/<pid>/cmdline for as long as nmcli runs. The password arrives
+    // on the script's stdin, and printf is a shell builtin (never its own
+    // process). A profile created here is deleted
     // again if activation fails, like `nmcli device wifi connect` does.
     function connectWifi(net, password) {
         const uuids = savedSsids[net.ssid] || []
@@ -151,6 +154,7 @@ Item {
         // WPA3-only networks need SAE; mixed WPA2/WPA3 accept plain PSK.
         const keyMgmt = /WPA3/.test(net.security) && !/WPA[12]/.test(net.security) ? "sae" : "wpa-psk"
         run("connecting to " + net.ssid, ["sh", "-c", `
+            IFS= read -r psk
             uuid=$1; ssid=$2; ifname=$3; km=$4; created=
             if [ -z "$uuid" ]; then
                 out=$(nmcli connection add type wifi con-name "$ssid" ssid "$ssid" wifi-sec.key-mgmt "$km") || exit 1
@@ -158,17 +162,19 @@ Item {
                 [ -n "$uuid" ] || { echo "could not create profile" >&2; exit 1; }
                 created=1
             fi
-            printf 'set 802-11-wireless-security.psk %s\\nsave persistent\\nquit\\n' "$QS_WIFI_PSK" \\
+            printf 'set 802-11-wireless-security.psk %s\\nsave persistent\\nquit\\n' "$psk" \\
                 | nmcli connection edit uuid "$uuid" >/dev/null 2>&1
             if [ -n "$ifname" ]; then nmcli connection up uuid "$uuid" ifname "$ifname"
             else nmcli connection up uuid "$uuid"; fi && exit 0
             [ -n "$created" ] && nmcli connection delete uuid "$uuid" >/dev/null 2>&1
             exit 1
-        `, "sh", uuids[0] || "", net.ssid, ifname, keyMgmt], { QS_WIFI_PSK: password })
+        `, "sh", uuids[0] || "", net.ssid, ifname, keyMgmt], password)
     }
 
     function forgetWifi(ssid) {
-        const uuids = savedSsids[ssid] || []
+        // Array.from: values read back out of a `var` property are Qt
+        // sequence wrappers, which lack flatMap and friends.
+        const uuids = Array.from(savedSsids[ssid] || [])
         if (uuids.length === 0) return
         run("forgetting " + ssid, ["nmcli", "connection", "delete"].concat(uuids.flatMap(u => ["uuid", u])))
     }
@@ -322,6 +328,8 @@ Item {
     Process {
         id: actionProc
         property string label: ""
+        property string input: ""
+        onStarted: if (input !== "") { write(input + "\n"); stdinEnabled = false }
         stdout: StdioCollector { id: actionStdout }
         stderr: StdioCollector { id: actionStderr }
         onExited: (exitCode) => {

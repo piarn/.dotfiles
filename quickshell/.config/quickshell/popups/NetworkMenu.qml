@@ -119,7 +119,7 @@ BarPopup {
             spacing: 10
 
             TextButton {
-                label: NetworkState.wifiEnabled ? "wi-fi off" : "wi-fi on"
+                label: NetworkState.wifiEnabled ? "turn wi-fi off" : "turn wi-fi on"
                 visible: NetworkState.wifiDevice !== null || !NetworkState.wifiEnabled
                 baseColor: NetworkState.wifiEnabled ? Colors.acid : Colors.red
                 enabled: !NetworkState.busy
