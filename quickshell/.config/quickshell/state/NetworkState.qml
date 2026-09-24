@@ -257,8 +257,13 @@ Item {
                 known: !!savedSsids[ssid],
             }
         }
+        // Signal in 4 bands (the same tiers as the icon), then by name: an
+        // exact-signal sort reshuffles the whole list on every poll, which
+        // makes a crowded office list impossible to read.
+        const bandRank = (n) => n.signal >= 75 ? 3 : n.signal >= 50 ? 2 : n.signal >= 25 ? 1 : 0
         assignIfChanged("wifiNetworks", Object.values(nets)
-            .sort((a, b) => (b.active - a.active) || (b.known - a.known) || (b.signal - a.signal)))
+            .sort((a, b) => (b.active - a.active) || (b.known - a.known)
+                || (bandRank(b) - bandRank(a)) || a.ssid.localeCompare(b.ssid)))
 
         const typeMap = { ethernet: "ethernet", wifi: "wifi", gsm: "wwan", cdma: "wwan" }
         const devs = []
