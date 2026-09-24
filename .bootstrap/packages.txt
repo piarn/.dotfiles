@@ -23,6 +23,7 @@ grim
 wf-recorder
 cliphist
 wlsunset
+udiskie
 slurp
 wl-clipboard
 swayidle

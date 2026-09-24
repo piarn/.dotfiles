@@ -81,6 +81,10 @@ exec /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
 # stores every copy. Skipped until installed.
 exec sh -c 'command -v cliphist >/dev/null && exec wl-paste --watch cliphist store'
 #
+# Automount + notifications for USB drives (eject: `udiskie-umount -a`).
+# Skipped until installed.
+exec sh -c 'command -v udiskie >/dev/null && exec udiskie --no-tray'
+#
 # Example configuration:
 #
 #   output HDMI-A-1 resolution 1920x1080 position 1920,0
