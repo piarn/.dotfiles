@@ -1,135 +1,74 @@
-// Bluetooth status, polled via bluetoothctl (same shell-out pattern as
-// NetworkState) rather than the native Quickshell.Bluetooth module: in
-// testing, Bluetooth.devices/Bluetooth.adapters (Quickshell 0.2.1) never
-// populated even minutes after the C++ side logged the adapter/device as
-// tracked (--vv showed "Tracked new adapter"/"Tracked new device" but
-// Bluetooth.adapters.values.length stayed 0) — a bug or a timing quirk
-// either way, so this sticks to the CLI, which is instant and reliable.
+// Bluetooth, backed by the native Quickshell.Bluetooth module (bluez over
+// D-Bus) — fully reactive, no polling. This used to shell out to
+// bluetoothctl every 5s (plus one `bluetoothctl info` per known device)
+// because Bluetooth.adapters never populated under Quickshell 0.2.1. On
+// 0.3.1 it does, but only once something *binds* to it: the module starts
+// tracking bluez lazily, so an imperative read right at startup still sees
+// null. Everything here is a binding for that reason.
 pragma Singleton
-import Quickshell.Io
+import Quickshell.Bluetooth
 import QtQuick
 
 Item {
     id: root
 
-    property bool powered: false
-    property var devices: []   // [{mac, name, paired, connected}]
-    property bool menuOpen: false
-    property bool scanning: false
-    property string actionStatus: ""
+    readonly property var adapter: Bluetooth.defaultAdapter
+    readonly property bool available: adapter !== null
+    readonly property bool powered: adapter ? adapter.enabled : false
+    readonly property bool scanning: adapter ? adapter.discovering : false
 
-    function refresh() {
-        statusProc.running = true
+    // Connected, then paired, then discovered-with-a-name. Unnamed
+    // discoveries (bluez aliases them to their address) are noise.
+    readonly property var devices: {
+        if (!adapter) return []
+        return adapter.devices.values
+            .filter(d => d.paired || d.connected || d.deviceName)
+            .sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired) || a.name.localeCompare(b.name))
     }
-
-    // `bluetoothctl devices` (unlike `devices Paired`) also lists anything
-    // discovered this boot, paired or not — so a scan just needs to run
-    // discovery for a bit and then fall through to the normal refresh().
-    function scan() {
-        scanning = true
-        scanProc.running = true
-    }
+    readonly property var connectedDevices: devices.filter(d => d.connected)
 
     function togglePower() {
-        powerProc.command = ["bluetoothctl", "power", root.powered ? "off" : "on"]
-        powerProc.running = true
+        if (adapter) adapter.enabled = !adapter.enabled
     }
 
-    function pair(mac) {
-        actionStatus = "pairing…"
-        actionProc.command = ["bluetoothctl", "pair", mac]
-        actionProc.running = true
+    function scan() {
+        if (!adapter || !adapter.enabled) return
+        adapter.discovering = true
+        scanStop.restart()
     }
 
-    function connectTo(mac) {
-        actionStatus = "connecting…"
-        actionProc.command = ["bluetoothctl", "connect", mac]
-        actionProc.running = true
+    // Trusted so it can reconnect on its own later; pairing itself goes
+    // through the agent sway starts (~/.local/bin/bluetooth-agent).
+    function pair(device) {
+        device.trusted = true
+        device.pair()
     }
 
-    function disconnectFrom(mac) {
-        actionStatus = "disconnecting…"
-        actionProc.command = ["bluetoothctl", "disconnect", mac]
-        actionProc.running = true
+    function busy(device) {
+        return device.pairing || device.state === BluetoothDeviceState.Connecting
+            || device.state === BluetoothDeviceState.Disconnecting
     }
 
-    // For stale-pairing errors like "br-connection-key-missing" (bluez lost
-    // the link key — a re-pair with the same mac won't fix it, since
-    // bluetoothctl treats an already-paired device as a no-op). Removing it
-    // first drops it back to "discovered but unpaired" so a fresh pair()
-    // actually renegotiates a key.
-    function forget(mac) {
-        actionStatus = "forgetting…"
-        actionProc.command = ["bluetoothctl", "remove", mac]
-        actionProc.running = true
+    function stateText(device) {
+        if (device.pairing) return "pairing…"
+        if (device.state === BluetoothDeviceState.Connecting) return "connecting…"
+        if (device.state === BluetoothDeviceState.Disconnecting) return "disconnecting…"
+        return ""
     }
 
-    Process {
-        id: statusProc
-        // Fields are "|"-separated, not ":" — a mac address itself contains
-        // colons ("80:C3:BA:94:16:1F"), which broke a naive line.split(":")
-        // that used to live here (mac would come out as just "80").
-        command: ["sh", "-c", `
-            powered=$(bluetoothctl show | awk '/Powered:/{print $2}')
-            echo "POWERED|$powered"
-            bluetoothctl devices | while IFS= read -r line; do
-                mac=$(echo "$line" | awk '{print $2}')
-                name=$(echo "$line" | cut -d' ' -f3-)
-                info=$(bluetoothctl info "$mac")
-                paired=$(echo "$info" | grep -q 'Paired: yes' && echo yes || echo no)
-                connected=$(echo "$info" | grep -q 'Connected: yes' && echo yes || echo no)
-                echo "DEV|$mac|$name|$paired|$connected"
-            done
-        `]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const lines = text.trim().split("\n")
-                const rows = []
-                for (const line of lines) {
-                    if (line.startsWith("POWERED|")) {
-                        root.powered = line.slice("POWERED|".length) === "yes"
-                    } else if (line.startsWith("DEV|")) {
-                        const [, mac, name, paired, connected] = line.split("|")
-                        rows.push({ mac, name, paired: paired === "yes", connected: connected === "yes" })
-                    }
-                }
-                // Connected, then paired, then just-discovered — so the
-                // things you're most likely to act on aren't buried below
-                // whatever else the adapter has ever seen.
-                rows.sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired))
-                root.devices = rows
-            }
-        }
-    }
-
-    Process {
-        id: scanProc
-        command: ["bluetoothctl", "--timeout", "8", "scan", "on"]
-        onExited: {
-            root.scanning = false
-            root.refresh()
-        }
-    }
-
-    Process {
-        id: powerProc
-        onExited: root.refresh()
-    }
-
-    Process {
-        id: actionProc
-        stdout: StdioCollector { id: actionStdout }
-        onExited: (exitCode) => {
-            root.actionStatus = exitCode === 0 ? "" : "failed: " + actionStdout.text.trim().split("\n").pop()
-            root.refresh()
-        }
+    function icon(device) {
+        const i = device.icon || ""
+        if (i.startsWith("audio")) return "\u{f02cb}"
+        if (i === "input-mouse") return "\u{f037d}"
+        if (i === "input-keyboard") return "\u{f030c}"
+        if (i === "input-gaming") return "\u{f0297}"
+        if (i === "phone") return "\u{f011c}"
+        return "\u{f00af}"
     }
 
     Timer {
-        interval: 5000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root.refresh()
+        id: scanStop
+        interval: 15000
+        onTriggered: if (root.adapter) root.adapter.discovering = false
     }
 }

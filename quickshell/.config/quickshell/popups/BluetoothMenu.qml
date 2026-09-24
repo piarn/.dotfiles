@@ -1,230 +1,164 @@
-// Bluetooth popup, opened by clicking the bluetooth widget in Bar.qml.
-// Same pattern as NetworkMenu.qml: a shared singleton (BluetoothState, from
-// ../state) both files read/toggle directly, no IPC needed.
-import Quickshell
-import Quickshell.Wayland
+// Bluetooth popup, opened by clicking the bluetooth widget in Bar.qml or
+// the › on the quick settings tile. Rows are live BluetoothDevice objects
+// (see state/BluetoothState.qml), so connect/pair progress shows without
+// any refresh.
 import QtQuick
 import quickshell
 import "../state"
+import "../components"
 
-PanelWindow {
+BarPopup {
     id: menu
-    visible: BluetoothState.menuOpen
-    // See NetworkMenu.qml's comment on this — Exclusive instead of the
-    // on-demand "focusable: true" so Escape closes this immediately.
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-    color: "transparent"
-    anchors {
-        top: true
-        bottom: true
-        left: true
-        right: true
-    }
-    // See NetworkMenu.qml's comment on this — keeps the bar clickable
-    // underneath while this popup is open.
-    margins.top: 28
+    name: "bluetooth"
+    fixedWidth: 320
 
-    onVisibleChanged: {
-        if (visible) {
-            BluetoothState.refresh()
-            Qt.callLater(() => catcher.forceActiveFocus())
-        }
-    }
-
-    MouseArea {
-        anchors.fill: parent
-        onClicked: BluetoothState.menuOpen = false
-    }
+    onOpened: BluetoothState.scan()
 
     Item {
-        id: catcher
-        anchors.fill: parent
-        focus: true
-        Keys.onEscapePressed: BluetoothState.menuOpen = false
+        width: parent.width
+        height: powerLabel.implicitHeight
+
+        Row {
+            anchors.left: parent.left
+            spacing: 6
+
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                color: BluetoothState.powered ? Colors.neon : Colors.red
+                text: BluetoothState.powered ? "\u{f00af}" : "\u{f00b2}"
+            }
+            MonoText {
+                id: powerLabel
+                anchors.verticalCenter: parent.verticalCenter
+                font.pixelSize: 13
+                font.bold: true
+                color: BluetoothState.powered ? Colors.neon : Colors.red
+                text: !BluetoothState.available ? "no adapter"
+                    : BluetoothState.powered ? "bluetooth on" : "bluetooth off"
+            }
+        }
+        TextButton {
+            anchors.right: parent.right
+            visible: BluetoothState.available
+            label: BluetoothState.powered ? "turn off" : "turn on"
+            onClicked: BluetoothState.togglePower()
+        }
     }
 
-    Rectangle {
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: 6
-        anchors.rightMargin: 10
-        width: 300
-        color: Colors.black
-        border.color: Colors.neon
-        border.width: 2
-        radius: 6
-        height: content.implicitHeight + 24
+    Divider {}
 
-        MouseArea {
-            anchors.fill: parent
+    Item {
+        width: parent.width
+        height: scanBtn.implicitHeight
+        visible: BluetoothState.powered
+
+        MonoText {
+            anchors.left: parent.left
+            color: Colors.gray
+            text: BluetoothState.scanning ? "devices · scanning…" : "devices"
         }
+        TextButton {
+            id: scanBtn
+            anchors.right: parent.right
+            label: "scan"
+            enabled: !BluetoothState.scanning
+            onClicked: BluetoothState.scan()
+        }
+    }
 
-        Column {
-            id: content
-            anchors.fill: parent
-            anchors.margins: 12
-            spacing: 10
+    MonoText {
+        width: parent.width
+        visible: BluetoothState.powered && BluetoothState.devices.length === 0
+        color: Colors.gray
+        text: BluetoothState.scanning ? "looking for devices…" : "no devices — try [scan]"
+    }
 
-            Item {
-                width: parent.width
-                height: powerLabel.implicitHeight
+    MonoText {
+        width: parent.width
+        visible: BluetoothState.available && !BluetoothState.powered
+        color: Colors.gray
+        wrapMode: Text.Wrap
+        text: "turn bluetooth on to see devices"
+    }
+
+    Column {
+        width: parent.width
+        spacing: 2
+        visible: BluetoothState.powered
+
+        Repeater {
+            model: BluetoothState.devices
+
+            delegate: Rectangle {
+                id: row
+                required property var modelData
+                readonly property string status: BluetoothState.stateText(modelData)
+                width: menu.innerWidth
+                height: 34
+                radius: 4
+                color: modelData.connected ? Colors.dim : "transparent"
+
+                Icon {
+                    id: devIcon
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: row.modelData.connected ? Colors.neon : row.modelData.paired ? Colors.fg : Colors.gray
+                    text: BluetoothState.icon(row.modelData)
+                }
+
+                Column {
+                    anchors.left: devIcon.right
+                    anchors.right: actions.left
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    MonoText {
+                        width: parent.width
+                        font.pixelSize: 13
+                        elide: Text.ElideRight
+                        color: row.modelData.connected ? Colors.neon : row.modelData.paired ? Colors.fg : Colors.gray2
+                        text: row.modelData.name || row.modelData.address
+                    }
+                    MonoText {
+                        width: parent.width
+                        visible: text !== ""
+                        font.pixelSize: 11
+                        color: Colors.gray2
+                        text: row.status
+                            || (row.modelData.connected && row.modelData.batteryAvailable
+                                ? "battery " + Math.round(row.modelData.battery * 100) + "%" : "")
+                    }
+                }
 
                 Row {
-                    anchors.left: parent.left
-                    spacing: 6
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.family: "Symbols Nerd Font Mono"
-                        font.pixelSize: 15
-                        color: BluetoothState.powered ? Colors.neon : Colors.red
-                        text: BluetoothState.powered ? "\u{f00af}" : "\u{f00b2}"
-                    }
-                    Text {
-                        id: powerLabel
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.family: "monospace"
-                        font.pixelSize: 13
-                        font.bold: true
-                        color: BluetoothState.powered ? Colors.neon : Colors.red
-                        text: BluetoothState.powered ? "bluetooth on" : "bluetooth off"
-                    }
-                }
-                Text {
+                    id: actions
                     anchors.right: parent.right
-                    font.family: "monospace"
-                    font.pixelSize: 12
-                    color: Colors.acid
-                    text: BluetoothState.powered ? "[turn off]" : "[turn on]"
-                    MouseArea { anchors.fill: parent; onClicked: BluetoothState.togglePower() }
-                }
-            }
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
 
-            Rectangle { width: parent.width; height: 1; color: Colors.dim }
-
-            Item {
-                width: parent.width
-                height: scanLabel.implicitHeight
-                visible: BluetoothState.powered
-
-                Text {
-                    anchors.left: parent.left
-                    font.family: "monospace"
-                    font.pixelSize: 12
-                    color: Colors.gray
-                    text: BluetoothState.scanning ? "scanning…" : "devices"
-                }
-                Text {
-                    id: scanLabel
-                    anchors.right: parent.right
-                    font.family: "monospace"
-                    font.pixelSize: 12
-                    color: BluetoothState.scanning ? Colors.gray : Colors.acid
-                    text: "[scan]"
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: !BluetoothState.scanning
-                        onClicked: BluetoothState.scan()
+                    // For stale pairings (bluez "br-connection-key-missing"):
+                    // connect keeps failing until the device is removed and
+                    // re-paired from scratch.
+                    TextButton {
+                        visible: row.modelData.paired && !row.modelData.connected
+                        label: "forget"
+                        baseColor: Colors.gray
+                        enabled: !BluetoothState.busy(row.modelData)
+                        onClicked: row.modelData.forget()
                     }
-                }
-            }
-
-            Text {
-                width: parent.width
-                visible: BluetoothState.powered && BluetoothState.devices.length === 0
-                font.family: "monospace"
-                font.pixelSize: 12
-                color: Colors.gray
-                text: "no devices — try [scan]"
-            }
-
-            Text {
-                width: parent.width
-                visible: !BluetoothState.powered
-                font.family: "monospace"
-                font.pixelSize: 12
-                color: Colors.gray
-                text: "turn bluetooth on to see devices"
-                wrapMode: Text.Wrap
-            }
-
-            Column {
-                width: parent.width
-                spacing: 2
-                visible: BluetoothState.powered
-
-                Repeater {
-                    model: BluetoothState.devices
-
-                    delegate: Rectangle {
-                        required property var modelData
-                        width: content.width
-                        height: 32
-                        radius: 4
-                        color: modelData.connected ? Colors.dim : "transparent"
-
-                        Text {
-                            anchors.left: parent.left
-                            anchors.right: actions.left
-                            anchors.leftMargin: 6
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: "monospace"
-                            font.pixelSize: 13
-                            color: modelData.connected ? Colors.neon : (modelData.paired ? Colors.fg : Colors.gray)
-                            elide: Text.ElideRight
-                            text: (modelData.connected ? "🔗 " : "  ") + modelData.name
-                        }
-
-                        Row {
-                            id: actions
-                            anchors.right: parent.right
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 8
-
-                            // Only offered when paired-but-not-connected: a
-                            // link key gone stale (bluez error
-                            // "br-connection-key-missing") makes connect()
-                            // fail forever until the device is removed and
-                            // re-paired from scratch.
-                            Text {
-                                visible: modelData.paired && !modelData.connected
-                                font.family: "monospace"
-                                font.pixelSize: 12
-                                color: Colors.gray
-                                text: "[forget]"
-                                MouseArea { anchors.fill: parent; onClicked: BluetoothState.forget(modelData.mac) }
-                            }
-
-                            Text {
-                                font.family: "monospace"
-                                font.pixelSize: 12
-                                color: Colors.acid
-                                text: modelData.connected ? "[disconnect]" : (modelData.paired ? "[connect]" : "[pair]")
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        if (modelData.connected) BluetoothState.disconnectFrom(modelData.mac)
-                                        else if (modelData.paired) BluetoothState.connectTo(modelData.mac)
-                                        else BluetoothState.pair(modelData.mac)
-                                    }
-                                }
-                            }
+                    TextButton {
+                        label: row.modelData.connected ? "disconnect" : row.modelData.paired ? "connect" : "pair"
+                        enabled: !BluetoothState.busy(row.modelData)
+                        onClicked: {
+                            if (row.modelData.connected) row.modelData.disconnect()
+                            else if (row.modelData.paired) row.modelData.connect()
+                            else BluetoothState.pair(row.modelData)
                         }
                     }
                 }
-            }
-
-            Text {
-                width: parent.width
-                visible: BluetoothState.actionStatus !== ""
-                font.family: "monospace"
-                font.pixelSize: 12
-                color: BluetoothState.actionStatus.startsWith("failed") ? Colors.red : Colors.acid
-                text: BluetoothState.actionStatus
-                wrapMode: Text.Wrap
             }
         }
     }
