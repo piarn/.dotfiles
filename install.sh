@@ -58,6 +58,36 @@ install_packages() {
     fi
 }
 
+# Installs every app in .bootstrap/flatpaks.txt (one Flathub app id per
+# line) that isn't installed yet, system-wide like Fedora's own flatpak
+# setup, adding the Flathub remote first if it's missing. Runs before
+# stowing so install_kde_flatpak_theme finds the KDE apps it themes.
+install_flatpaks() {
+    if ! command -v flatpak >/dev/null 2>&1; then
+        echo "warning: flatpak not found; skipping .bootstrap/flatpaks.txt" >&2
+        return
+    fi
+
+    local apps=() app missing=()
+    while IFS= read -r app; do
+        case "$app" in ''|'#'*) continue ;; esac
+        apps+=("$app")
+    done <"$BOOTSTRAP_DIR/flatpaks.txt"
+
+    for app in "${apps[@]}"; do
+        flatpak info "$app" >/dev/null 2>&1 || missing+=("$app")
+    done
+
+    if [ ${#missing[@]} -eq 0 ]; then
+        echo "==> flatpaks already installed, nothing to do"
+        return
+    fi
+
+    echo "==> installing flatpaks: ${missing[*]}"
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    sudo flatpak install -y --noninteractive flathub "${missing[@]}"
+}
+
 # Several Mason-managed LSP servers (json-lsp, bash-language-server,
 # yaml-language-server, ...) are npm packages, so npm must exist before
 # nvim can install them.
@@ -301,6 +331,7 @@ install_fish_plugins() {
 }
 
 install_packages
+install_flatpaks
 install_node
 install_rice
 install_nerd_font_symbols

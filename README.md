@@ -13,7 +13,8 @@ cd ~/.dots
 ```
 
 `install.sh` installs whatever's missing from `.bootstrap/packages.txt`
-(apt/dnf), then symlinks each package into `$HOME`. It runs with `--adopt`,
+(apt/dnf) and `.bootstrap/flatpaks.txt` (Flathub apps, system-wide), then
+symlinks each package into `$HOME`. It runs with `--adopt`,
 so any real file already sitting at a target path (e.g. an existing
 `~/.bashrc`) is moved into the repo first, then symlinked back — check
 `git diff` afterward and revert with `git checkout -- <file>` if the repo
