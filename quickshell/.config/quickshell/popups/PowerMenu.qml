@@ -75,18 +75,15 @@ CardWindow {
                     anchors.centerIn: parent
                     spacing: 6
 
-                    Text {
+                    Icon {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        font.family: "Symbols Nerd Font Mono"
                         font.pixelSize: 26
                         color: index === powerMenu.selected ? Colors.neon : Colors.fg
                         text: modelData.icon
                     }
 
-                    Text {
+                    MonoText {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        font.family: "monospace"
-                        font.pixelSize: 12
                         color: index === powerMenu.selected ? Colors.neon : Colors.gray
                         text: modelData.label
                     }

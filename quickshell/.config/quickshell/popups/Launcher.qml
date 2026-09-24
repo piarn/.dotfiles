@@ -109,10 +109,9 @@ CardWindow {
                             source: Quickshell.iconPath(modelData.icon, "application-x-executable")
                         }
 
-                        Text {
+                        MonoText {
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.name
-                            font.family: "monospace"
                             font.pixelSize: 14
                             color: index === launcher.selected ? Colors.neon : Colors.fg
                         }

@@ -125,10 +125,8 @@ BarPopup {
         width: parent.width
         height: settingsBtn.implicitHeight
 
-        Text {
+        MonoText {
             anchors.left: parent.left
-            font.family: "monospace"
-            font.pixelSize: 12
             color: Colors.gray
             text: "interfaces"
         }
@@ -160,10 +158,8 @@ BarPopup {
         width: parent.width
         spacing: 4
 
-        Text {
+        MonoText {
             visible: NetworkState.devices.length === 0
-            font.family: "monospace"
-            font.pixelSize: 12
             color: Colors.gray
             text: "no network devices"
         }
@@ -182,13 +178,12 @@ BarPopup {
                 border.width: modelData.primary ? 1 : 0
                 border.color: Colors.neon
 
-                Text {
+                Icon {
                     id: devIcon
                     anchors.left: parent.left
                     anchors.leftMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     width: 18
-                    font.family: "Symbols Nerd Font Mono"
                     font.pixelSize: 16
                     color: !devRow.modelData.connected ? Colors.gray
                         : devRow.modelData.primary ? Colors.neon : Colors.acid
@@ -208,23 +203,21 @@ BarPopup {
                         width: parent.width
                         height: devTitle.implicitHeight
 
-                        Text {
+                        MonoText {
                             id: devTitle
                             anchors.left: parent.left
                             width: Math.min(implicitWidth, parent.width - devName.implicitWidth - devActions.implicitWidth - 16)
-                            font.family: "monospace"
                             font.pixelSize: 13
                             font.bold: devRow.modelData.primary
                             elide: Text.ElideRight
                             color: devRow.modelData.connected ? Colors.fg : Colors.gray2
                             text: menu.deviceTitle(devRow.modelData)
                         }
-                        Text {
+                        MonoText {
                             id: devName
                             anchors.left: devTitle.right
                             anchors.leftMargin: 6
                             anchors.baseline: devTitle.baseline
-                            font.family: "monospace"
                             font.pixelSize: 11
                             color: Colors.gray
                             text: devRow.modelData.device
@@ -236,10 +229,9 @@ BarPopup {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 8
 
-                            Text {
+                            MonoText {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: devRow.modelData.primary && menu.routedCount > 1
-                                font.family: "monospace"
                                 font.pixelSize: 11
                                 font.bold: true
                                 color: Colors.neon
@@ -261,9 +253,8 @@ BarPopup {
                         }
                     }
 
-                    Text {
+                    MonoText {
                         width: parent.width
-                        font.family: "monospace"
                         font.pixelSize: 11
                         elide: Text.ElideRight
                         color: devRow.modelData.connected ? Colors.gray2 : Colors.gray
@@ -283,9 +274,7 @@ BarPopup {
         spacing: 4
         visible: NetworkState.vpns.length > 0
 
-        Text {
-            font.family: "monospace"
-            font.pixelSize: 12
+        MonoText {
             color: Colors.gray
             text: "vpn"
         }
@@ -306,15 +295,12 @@ BarPopup {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
 
-                    Text {
-                        font.family: "Symbols Nerd Font Mono"
-                        font.pixelSize: 15
+                    Icon {
                         color: vpnRow.modelData.active ? Colors.neon : Colors.gray
                         text: "\u{f0582}"
                     }
-                    Text {
+                    MonoText {
                         width: parent.width - 30
-                        font.family: "monospace"
                         font.pixelSize: 13
                         elide: Text.ElideRight
                         color: vpnRow.modelData.active ? Colors.fg : Colors.gray2
@@ -349,10 +335,8 @@ BarPopup {
             width: parent.width
             height: rescanBtn.implicitHeight + 4
 
-            Text {
+            MonoText {
                 anchors.left: parent.left
-                font.family: "monospace"
-                font.pixelSize: 12
                 color: Colors.gray
                 text: !NetworkState.wifiEnabled ? "wi-fi is off"
                     : NetworkState.scanning ? "wi-fi · scanning…" : "wi-fi networks"
@@ -378,12 +362,11 @@ BarPopup {
             border.color: searchInput.activeFocus ? Colors.neon : Colors.dim
             border.width: 1
 
-            Text {
+            Icon {
                 id: searchIcon
                 anchors.left: parent.left
                 anchors.leftMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
-                font.family: "Symbols Nerd Font Mono"
                 font.pixelSize: 12
                 color: Colors.gray
                 text: "\u{f002}"
@@ -411,24 +394,21 @@ BarPopup {
                 Keys.onEnterPressed: if (menu.shownNetworks.length) menu.clickNetwork(menu.shownNetworks[0])
             }
 
-            Text {
+            MonoText {
                 anchors.left: searchInput.left
                 anchors.verticalCenter: parent.verticalCenter
                 visible: searchInput.text === ""
-                font.family: "monospace"
-                font.pixelSize: 12
                 color: Colors.gray
                 text: "search " + NetworkState.wifiNetworks.length + " networks"
             }
 
-            Text {
+            Icon {
                 id: clearSearch
                 anchors.right: parent.right
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
                 visible: searchInput.text !== ""
                 width: visible ? implicitWidth : 0
-                font.family: "Symbols Nerd Font Mono"
                 font.pixelSize: 12
                 color: clearMouse.containsMouse ? Colors.fg : Colors.gray
                 text: "\u{f00d}"
@@ -444,11 +424,9 @@ BarPopup {
             }
         }
 
-        Text {
+        MonoText {
             visible: NetworkState.wifiEnabled && searchInput.text !== "" && menu.shownNetworks.length === 0
             leftPadding: 8
-            font.family: "monospace"
-            font.pixelSize: 12
             color: Colors.gray
             text: "no networks match"
         }
@@ -491,25 +469,22 @@ BarPopup {
                     onClicked: menu.clickNetwork(netRow.modelData)
                 }
 
-                Text {
+                Icon {
                     id: netIcon
                     anchors.left: parent.left
                     anchors.leftMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     width: 18
-                    font.family: "Symbols Nerd Font Mono"
-                    font.pixelSize: 15
                     color: netRow.modelData.active ? Colors.neon : Colors.gray2
                     text: NetworkState.wifiGlyph(netRow.modelData.signal)
                 }
 
-                Text {
+                MonoText {
                     anchors.left: netIcon.right
                     anchors.right: netRight.left
                     anchors.leftMargin: 8
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    font.family: "monospace"
                     font.pixelSize: 13
                     elide: Text.ElideRight
                     color: netRow.modelData.active ? Colors.neon : Colors.fg
@@ -533,18 +508,16 @@ BarPopup {
                         enabled: !NetworkState.busy
                         onClicked: NetworkState.forgetWifi(netRow.modelData.ssid)
                     }
-                    Text {
+                    Icon {
                         anchors.verticalCenter: parent.verticalCenter
-                        font.family: "Symbols Nerd Font Mono"
                         font.pixelSize: 12
                         color: Colors.gray2
                         text: netRow.modelData.security ? "\u{f033e}" : ""
                     }
-                    Text {
+                    MonoText {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 30
                         horizontalAlignment: Text.AlignRight
-                        font.family: "monospace"
                         font.pixelSize: 11
                         color: Colors.gray2
                         text: netRow.modelData.signal + "%"
@@ -567,11 +540,10 @@ BarPopup {
         // Outside the Repeater on purpose: wifiNetworks is replaced on
         // every refresh, which rebuilds the delegates and would wipe a
         // half-typed password (and its focus) if the input lived there.
-        Text {
+        MonoText {
             visible: menu.pwFor !== ""
             leftPadding: 8
             topPadding: 4
-            font.family: "monospace"
             font.pixelSize: 11
             color: Colors.gray2
             text: "password for " + menu.pwFor
@@ -606,13 +578,11 @@ BarPopup {
                     Keys.onEscapePressed: menu.cancelPassword()
                 }
 
-                Text {
+                MonoText {
                     anchors.left: parent.left
                     anchors.leftMargin: 6
                     anchors.verticalCenter: parent.verticalCenter
                     visible: pwInput.text === ""
-                    font.family: "monospace"
-                    font.pixelSize: 12
                     color: Colors.gray
                     text: "password"
                 }
@@ -631,11 +601,9 @@ BarPopup {
         }
     }
 
-    Text {
+    MonoText {
         width: parent.width
         visible: NetworkState.actionStatus !== ""
-        font.family: "monospace"
-        font.pixelSize: 12
         color: NetworkState.actionStatus.startsWith("failed") || NetworkState.actionStatus.startsWith("busy")
             ? Colors.red : Colors.acid
         text: NetworkState.actionStatus
