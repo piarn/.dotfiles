@@ -284,15 +284,11 @@ bindsym $mod+r mode "resize"
     # brightnessctl needed), which also shows the OSD.
     bindsym --locked XF86MonBrightnessDown exec $qs ipc call brightness down
     bindsym --locked XF86MonBrightnessUp exec $qs ipc call brightness up
-    # Full screen, straight to satty for annotation (crop/arrows/blur/
-    # numbered markers/text/undo) — Enter saves + copies, see
-    # ~/.rice/satty for the save location/theming. satty lives under
-    # ~/.local/bin (no apt/dnf package), which isn't on the PATH sway's
-    # own exec runs with (see ~/.config/environment.d/path.conf) — call
-    # it by full path so the bind doesn't depend on that being reloaded.
-    bindsym Print exec grim - | ~/.local/bin/satty --filename -
-    # Region screenshot: slurp for selection, then the same satty step.
-    bindsym $mod+Shift+s exec grim -g "$(slurp)" - | ~/.local/bin/satty --filename -
+    # Region screenshot -> satty for annotation (crop/arrows/blur/numbered
+    # markers/text/undo); Enter saves + copies, see ~/.rice/satty for the
+    # save location/theming. satty lives under ~/.local/bin, off sway's
+    # PATH, hence the full paths.
+    bindsym $mod+Shift+s exec ~/.local/bin/screenshot-region
 
 #
 # Status Bar:
