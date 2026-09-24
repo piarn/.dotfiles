@@ -68,6 +68,14 @@ record() {
 record -c h264_vaapi -d /dev/dri/renderD128
 status=$?
 # VAAPI failing shows up as an immediate exit with no usable file.
+# NVIDIA's encoder next: when sway renders on the NVIDIA GPU (docked
+# hybrid laptop) the Intel VAAPI path can't take its frames, and Fedora's
+# ffmpeg-free has no libx264. Exits immediately where there's no NVIDIA.
+if [ ! -s "$file" ]; then
+    rm -f "$file"
+    record -c h264_nvenc
+    status=$?
+fi
 if [ ! -s "$file" ]; then
     rm -f "$file"
     record -c libx264 -p preset=veryfast -p crf=23
