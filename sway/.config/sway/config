@@ -66,6 +66,17 @@ exec_always ~/.rice/bin/layout-watch
 # already running.
 exec_always ~/.local/bin/bluetooth-agent
 #
+# Screen sharing (Meet/Teams/Zoom in the browser): xdg-desktop-portal only
+# reads ~/.config/xdg-desktop-portal/sway-portals.conf, which routes
+# ScreenCast to the wlr backend, when XDG_CURRENT_DESKTOP is in the
+# systemd user environment, and /etc/sway/config.d doesn't export it. The
+# portal may already have started without it, hence the restart.
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway && systemctl --user restart xdg-desktop-portal
+#
+# Password prompts for privileged actions (NetworkManager/bluetooth
+# changes, pkexec, disk tools); without an agent they fail silently.
+exec /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
+#
 # Example configuration:
 #
 #   output HDMI-A-1 resolution 1920x1080 position 1920,0
