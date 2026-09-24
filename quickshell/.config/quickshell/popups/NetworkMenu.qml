@@ -1,232 +1,515 @@
-// Network popup, opened by clicking the network widget in Bar.qml (toggles
-// NetworkState.menuOpen — no IPC needed, both just see the same singleton
-// via ../state). Shows current connection + nearby wifi networks,
-// click-to-connect with a password fallback for secured networks nmcli
-// doesn't already have a profile for.
-import Quickshell
-import Quickshell.Wayland
+// Network popup, opened by clicking the network widget in Bar.qml. Three
+// sections:
+//  - interfaces: every managed ethernet/wifi/wwan device, with the one
+//    holding the default route marked primary, [make primary] on the rest,
+//    and connect/disconnect per device
+//  - vpn: NetworkManager vpn/wireguard profiles (hidden when there are none)
+//  - wi-fi: nearby networks, click to connect; asks for a password up front
+//    for secured networks with no saved profile instead of failing first
+// Anything deeper (static IPs, DNS, 802.1X) goes to [settings], which opens
+// nm-connection-editor.
 import QtQuick
 import quickshell
 import "../state"
+import "../components"
 
-PanelWindow {
+BarPopup {
     id: menu
-    visible: NetworkState.menuOpen
-    // Exclusive (not the on-demand "focusable: true") so Escape works right
-    // away — on-demand only gets granted after a click lands on this
-    // surface, and nothing does since it's opened by clicking the bar
-    // instead (see Launcher.qml's identical fix).
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-    color: "transparent"
-    anchors {
-        top: true
-        bottom: true
-        left: true
-        right: true
-    }
-    // Surface starts below the bar (not at the screen edge) so the bar's
-    // own icons stay clickable while this is open — otherwise this
-    // fullscreen click-away catcher and the bar's surface both cover that
-    // strip, and which one wins the click is stacking-order roulette.
-    margins.top: 28
+    name: "network"
+    fixedWidth: 400
 
     property string lastAttempted: ""
+    property var pwNet: null   // network whose password row is open
+    readonly property string pwFor: pwNet ? pwNet.ssid : ""
+    // exclusive keyboard while typing a password, see CardWindow
+    needsKeyboard: pwFor !== ""
 
-    onVisibleChanged: {
-        if (visible) {
-            NetworkState.scan()
-            Qt.callLater(() => catcher.forceActiveFocus())
+    readonly property int routedCount: NetworkState.devices.filter(d => d.connected && d.gateway).length
+
+    function clickNetwork(net) {
+        if (net.active) return
+        // Enterprise (802.1X) and WEP need more than a password field.
+        if (!net.known && /802\.1X|WEP/.test(net.security)) {
+            NetworkState.openEditor()
+            close()
+            return
+        }
+        if (net.security && !net.known) {
+            pwNet = net
+            return
+        }
+        pwNet = null
+        lastAttempted = net.ssid
+        NetworkState.connectWifi(net)
+    }
+
+    function submitPassword(password) {
+        if (!password || !pwNet) return
+        const net = pwNet
+        lastAttempted = net.ssid
+        pwNet = null
+        NetworkState.connectWifi(net, password)
+    }
+
+    function cancelPassword() {
+        pwNet = null
+        focusCatcher()
+    }
+
+    function deviceTitle(dev) {
+        if (dev.type === "wifi") return dev.connection || "Wi-Fi"
+        if (dev.type === "wwan") return dev.connection || "Mobile"
+        // netplan-generated profile names are just a uuid — not worth showing
+        return dev.connection && !dev.connection.startsWith("netplan-") ? dev.connection : "Ethernet"
+    }
+
+    function deviceDetail(dev) {
+        if (dev.connected) {
+            const parts = [dev.ip || "no ip"]
+            if (dev.type === "wifi") parts.unshift(dev.signal + "%")
+            if (dev.gateway) parts.push("via " + dev.gateway, "metric " + dev.metric)
+            return parts.join(" · ")
+        }
+        if (dev.state === "unavailable") return dev.type === "ethernet" ? "cable unplugged" : "unavailable"
+        return dev.state
+    }
+
+    onPwForChanged: {
+        pwInput.text = ""
+        if (pwFor) Qt.callLater(() => pwInput.forceActiveFocus())
+    }
+
+    onOpened: {
+        pwNet = null
+        NetworkState.actionStatus = ""
+        NetworkState.refresh()
+        NetworkState.scan()
+    }
+
+    // A failed connect to a secured network most often means a wrong or
+    // missing password — reopen the password row for it.
+    Connections {
+        target: NetworkState
+        function onActionStatusChanged() {
+            if (NetworkState.actionStatus.startsWith("failed") && menu.lastAttempted) {
+                const net = NetworkState.wifiNetworks.find(n => n.ssid === menu.lastAttempted)
+                if (net && net.security && !/802\.1X|WEP/.test(net.security)) menu.pwNet = net
+                menu.lastAttempted = ""
+            } else if (NetworkState.actionStatus === "") {
+                menu.lastAttempted = ""
+            }
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        onClicked: NetworkState.menuOpen = false
-    }
-
+    // header
     Item {
-        id: catcher
-        anchors.fill: parent
-        focus: true
-        Keys.onEscapePressed: NetworkState.menuOpen = false
-    }
+        width: parent.width
+        height: settingsBtn.implicitHeight
 
-    Rectangle {
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: 6
-        anchors.rightMargin: 10
-        width: 320
-        color: Colors.black
-        border.color: Colors.neon
-        border.width: 2
-        radius: 6
-        height: content.implicitHeight + 24
-
-        MouseArea {
-            // swallow clicks so they don't fall through to the close-on-click-away area
-            anchors.fill: parent
+        Text {
+            anchors.left: parent.left
+            font.family: "monospace"
+            font.pixelSize: 12
+            color: Colors.gray
+            text: "interfaces"
         }
 
-        Column {
-            id: content
-            anchors.fill: parent
-            anchors.margins: 12
+        Row {
+            anchors.right: parent.right
             spacing: 10
 
-            Row {
-                width: parent.width
-                spacing: 6
-
-                Text {
-                    font.family: "Symbols Nerd Font Mono"
-                    font.pixelSize: 15
-                    color: NetworkState.kind === "none" ? Colors.red : Colors.neon
-                    text: {
-                        if (NetworkState.kind === "wifi") {
-                            if (NetworkState.signal >= 75) return "\u{f0928}"
-                            if (NetworkState.signal >= 50) return "\u{f0925}"
-                            if (NetworkState.signal >= 25) return "\u{f0922}"
-                            return "\u{f091f}"
-                        }
-                        if (NetworkState.kind === "eth") return "\u{f0200}"
-                        return "\u{f092d}"
-                    }
-                }
-
-                Text {
-                    width: parent.width - 24
-                    font.family: "monospace"
-                    font.pixelSize: 13
-                    font.bold: true
-                    color: Colors.neon
-                    text: {
-                        if (NetworkState.kind === "wifi")
-                            return NetworkState.ssid + " (" + NetworkState.signal + "%) — " + (NetworkState.ip || "no ip")
-                        if (NetworkState.kind === "eth")
-                            return NetworkState.device + " — " + (NetworkState.ip || "no ip")
-                        return "not connected"
-                    }
-                    wrapMode: Text.Wrap
+            TextButton {
+                label: NetworkState.wifiEnabled ? "wi-fi off" : "wi-fi on"
+                visible: NetworkState.wifiDevice !== null || !NetworkState.wifiEnabled
+                baseColor: NetworkState.wifiEnabled ? Colors.acid : Colors.red
+                enabled: !NetworkState.busy
+                onClicked: NetworkState.setWifiEnabled(!NetworkState.wifiEnabled)
+            }
+            TextButton {
+                id: settingsBtn
+                label: "settings"
+                onClicked: {
+                    NetworkState.openEditor()
+                    menu.close()
                 }
             }
+        }
+    }
 
-            Rectangle { width: parent.width; height: 1; color: Colors.dim }
+    // interfaces
+    Column {
+        width: parent.width
+        spacing: 4
 
-            Item {
-                width: parent.width
-                height: rescanLabel.implicitHeight
+        Text {
+            visible: NetworkState.devices.length === 0
+            font.family: "monospace"
+            font.pixelSize: 12
+            color: Colors.gray
+            text: "no network devices"
+        }
+
+        Repeater {
+            model: NetworkState.devices
+
+            delegate: Rectangle {
+                id: devRow
+                required property var modelData
+                readonly property bool usable: modelData.state !== "unavailable"
+                width: menu.innerWidth
+                height: devCol.implicitHeight + 10
+                radius: 4
+                color: modelData.primary ? Colors.dim : modelData.connected ? Colors.surface : "transparent"
+                border.width: modelData.primary ? 1 : 0
+                border.color: Colors.neon
 
                 Text {
+                    id: devIcon
                     anchors.left: parent.left
-                    font.family: "monospace"
-                    font.pixelSize: 12
-                    color: Colors.gray
-                    text: NetworkState.scanning ? "scanning…" : "nearby networks"
+                    anchors.leftMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 18
+                    font.family: "Symbols Nerd Font Mono"
+                    font.pixelSize: 16
+                    color: !devRow.modelData.connected ? Colors.gray
+                        : devRow.modelData.primary ? Colors.neon : Colors.acid
+                    text: NetworkState.icon(devRow.modelData)
                 }
-                Text {
-                    id: rescanLabel
+
+                Column {
+                    id: devCol
+                    anchors.left: devIcon.right
                     anchors.right: parent.right
-                    font.family: "monospace"
-                    font.pixelSize: 12
-                    color: Colors.acid
-                    text: "[rescan]"
-                    MouseArea { anchors.fill: parent; onClicked: NetworkState.scan() }
-                }
-            }
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
 
-            Column {
-                width: parent.width
-                spacing: 2
+                    Item {
+                        width: parent.width
+                        height: devTitle.implicitHeight
 
-                Repeater {
-                    model: NetworkState.scanResults
-
-                    delegate: Column {
-                        required property var modelData
-                        required property int index
-                        width: content.width
-                        spacing: 4
-
-                        Rectangle {
-                            width: parent.width
-                            height: 28
-                            radius: 4
-                            color: modelData.active ? Colors.dim : "transparent"
-
-                            Row {
-                                anchors.fill: parent
-                                anchors.leftMargin: 6
-                                spacing: 8
-
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    font.family: "monospace"
-                                    font.pixelSize: 13
-                                    color: modelData.active ? Colors.neon : Colors.fg
-                                    text: (modelData.security && modelData.security !== "--" ? "🔒 " : "  ") + modelData.ssid
-                                }
-                            }
-
-                            Text {
-                                anchors.right: parent.right
-                                anchors.rightMargin: 6
-                                anchors.verticalCenter: parent.verticalCenter
-                                font.family: "monospace"
-                                font.pixelSize: 12
-                                color: Colors.gray2
-                                text: modelData.signal + "%"
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    menu.lastAttempted = modelData.ssid
-                                    NetworkState.connectTo(modelData.ssid)
-                                }
-                            }
+                        Text {
+                            id: devTitle
+                            anchors.left: parent.left
+                            width: Math.min(implicitWidth, parent.width - devName.implicitWidth - devActions.implicitWidth - 16)
+                            font.family: "monospace"
+                            font.pixelSize: 13
+                            font.bold: devRow.modelData.primary
+                            elide: Text.ElideRight
+                            color: devRow.modelData.connected ? Colors.fg : Colors.gray2
+                            text: menu.deviceTitle(devRow.modelData)
+                        }
+                        Text {
+                            id: devName
+                            anchors.left: devTitle.right
+                            anchors.leftMargin: 6
+                            anchors.baseline: devTitle.baseline
+                            font.family: "monospace"
+                            font.pixelSize: 11
+                            color: Colors.gray
+                            text: devRow.modelData.device
                         }
 
                         Row {
-                            visible: menu.lastAttempted === modelData.ssid
-                                && NetworkState.connectStatus.startsWith("failed")
-                            width: parent.width
-                            spacing: 6
-
-                            TextInput {
-                                id: pwInput
-                                width: 180
-                                height: 22
-                                font.family: "monospace"
-                                font.pixelSize: 12
-                                color: Colors.neon
-                                clip: true
-                                echoMode: TextInput.Password
-                                Rectangle { anchors.fill: parent; anchors.margins: -2; z: -1; color: Colors.surface; border.color: Colors.dim; border.width: 1 }
-                                Keys.onReturnPressed: NetworkState.connectTo(modelData.ssid, pwInput.text)
-                            }
+                            id: devActions
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
 
                             Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: devRow.modelData.primary && menu.routedCount > 1
                                 font.family: "monospace"
-                                font.pixelSize: 12
-                                color: Colors.acid
-                                text: "[connect]"
-                                MouseArea { anchors.fill: parent; onClicked: NetworkState.connectTo(modelData.ssid, pwInput.text) }
+                                font.pixelSize: 11
+                                font.bold: true
+                                color: Colors.neon
+                                text: "\u2605 primary"
                             }
+                            TextButton {
+                                visible: devRow.modelData.connected && !devRow.modelData.primary && devRow.modelData.gateway !== ""
+                                label: "make primary"
+                                enabled: !NetworkState.busy
+                                onClicked: NetworkState.setPrimary(devRow.modelData)
+                            }
+                            TextButton {
+                                visible: devRow.usable
+                                label: devRow.modelData.connected ? "disconnect" : "connect"
+                                baseColor: devRow.modelData.connected ? Colors.gray2 : Colors.acid
+                                enabled: !NetworkState.busy
+                                onClicked: NetworkState.toggleDevice(devRow.modelData)
+                            }
+                        }
+                    }
+
+                    Text {
+                        width: parent.width
+                        font.family: "monospace"
+                        font.pixelSize: 11
+                        elide: Text.ElideRight
+                        color: devRow.modelData.connected ? Colors.gray2 : Colors.gray
+                        text: menu.deviceDetail(devRow.modelData)
+                    }
+                }
+            }
+        }
+    }
+
+    // vpn
+    Rectangle { width: parent.width; height: 1; color: Colors.dim; visible: vpnCol.visible }
+
+    Column {
+        id: vpnCol
+        width: parent.width
+        spacing: 4
+        visible: NetworkState.vpns.length > 0
+
+        Text {
+            font.family: "monospace"
+            font.pixelSize: 12
+            color: Colors.gray
+            text: "vpn"
+        }
+
+        Repeater {
+            model: NetworkState.vpns
+
+            delegate: Item {
+                id: vpnRow
+                required property var modelData
+                width: menu.innerWidth
+                height: 24
+
+                Row {
+                    anchors.left: parent.left
+                    anchors.right: vpnBtn.left
+                    anchors.leftMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Text {
+                        font.family: "Symbols Nerd Font Mono"
+                        font.pixelSize: 15
+                        color: vpnRow.modelData.active ? Colors.neon : Colors.gray
+                        text: "\u{f0582}"
+                    }
+                    Text {
+                        width: parent.width - 30
+                        font.family: "monospace"
+                        font.pixelSize: 13
+                        elide: Text.ElideRight
+                        color: vpnRow.modelData.active ? Colors.fg : Colors.gray2
+                        text: vpnRow.modelData.name + "  " + vpnRow.modelData.type
+                    }
+                }
+
+                TextButton {
+                    id: vpnBtn
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    label: vpnRow.modelData.active ? "disconnect" : "connect"
+                    baseColor: vpnRow.modelData.active ? Colors.gray2 : Colors.acid
+                    enabled: !NetworkState.busy
+                    onClicked: NetworkState.toggleVpn(vpnRow.modelData)
+                }
+            }
+        }
+    }
+
+    // wi-fi
+    Rectangle { width: parent.width; height: 1; color: Colors.dim; visible: wifiCol.visible }
+
+    Column {
+        id: wifiCol
+        width: parent.width
+        spacing: 2
+        visible: NetworkState.wifiDevice !== null
+
+        Item {
+            width: parent.width
+            height: rescanBtn.implicitHeight + 4
+
+            Text {
+                anchors.left: parent.left
+                font.family: "monospace"
+                font.pixelSize: 12
+                color: Colors.gray
+                text: !NetworkState.wifiEnabled ? "wi-fi is off"
+                    : NetworkState.scanning ? "wi-fi · scanning…" : "wi-fi networks"
+            }
+            TextButton {
+                id: rescanBtn
+                anchors.right: parent.right
+                visible: NetworkState.wifiEnabled
+                label: "rescan"
+                enabled: !NetworkState.scanning
+                onClicked: NetworkState.scan()
+            }
+        }
+
+        Repeater {
+            model: NetworkState.wifiEnabled ? NetworkState.wifiNetworks : []
+
+            delegate: Column {
+                id: netRow
+                required property var modelData
+                width: menu.innerWidth
+                spacing: 4
+
+                Rectangle {
+                    width: parent.width
+                    height: 28
+                    radius: 4
+                    color: netRow.modelData.active ? Colors.dim
+                        : netMouse.containsMouse ? Colors.surface : "transparent"
+
+                    MouseArea {
+                        id: netMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: netRow.modelData.active ? Qt.ArrowCursor : Qt.PointingHandCursor
+                        onClicked: menu.clickNetwork(netRow.modelData)
+                    }
+
+                    Text {
+                        id: netIcon
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 18
+                        font.family: "Symbols Nerd Font Mono"
+                        font.pixelSize: 15
+                        color: netRow.modelData.active ? Colors.neon : Colors.gray2
+                        text: NetworkState.wifiGlyph(netRow.modelData.signal)
+                    }
+
+                    Text {
+                        anchors.left: netIcon.right
+                        anchors.right: netRight.left
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.family: "monospace"
+                        font.pixelSize: 13
+                        elide: Text.ElideRight
+                        color: netRow.modelData.active ? Colors.neon : Colors.fg
+                        text: netRow.modelData.ssid
+                    }
+
+                    Row {
+                        id: netRight
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+
+                        // only saved networks have something to forget,
+                        // so this doubles as the "saved" marker
+                        TextButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: netRow.modelData.known
+                            label: "forget"
+                            baseColor: Colors.gray
+                            enabled: !NetworkState.busy
+                            onClicked: NetworkState.forgetWifi(netRow.modelData.ssid)
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.family: "Symbols Nerd Font Mono"
+                            font.pixelSize: 12
+                            color: Colors.gray2
+                            text: netRow.modelData.security ? "\u{f033e}" : ""
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 30
+                            horizontalAlignment: Text.AlignRight
+                            font.family: "monospace"
+                            font.pixelSize: 11
+                            color: Colors.gray2
+                            text: netRow.modelData.signal + "%"
                         }
                     }
                 }
             }
+        }
 
-            Text {
-                width: parent.width
-                visible: NetworkState.connectStatus !== ""
-                font.family: "monospace"
-                font.pixelSize: 12
-                color: NetworkState.connectStatus.startsWith("failed") ? Colors.red : Colors.acid
-                text: NetworkState.connectStatus
-                wrapMode: Text.Wrap
+        // Outside the Repeater on purpose: wifiNetworks is replaced on
+        // every refresh, which rebuilds the delegates and would wipe a
+        // half-typed password (and its focus) if the input lived there.
+        Text {
+            visible: menu.pwFor !== ""
+            leftPadding: 8
+            topPadding: 4
+            font.family: "monospace"
+            font.pixelSize: 11
+            color: Colors.gray2
+            text: "password for " + menu.pwFor
+        }
+
+        Row {
+            visible: menu.pwFor !== ""
+            leftPadding: 8
+            spacing: 8
+
+            Rectangle {
+                width: 200
+                height: 24
+                radius: 3
+                color: Colors.surface
+                border.color: pwInput.activeFocus ? Colors.neon : Colors.dim
+                border.width: 1
+
+                TextInput {
+                    id: pwInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 6
+                    anchors.rightMargin: 6
+                    verticalAlignment: TextInput.AlignVCenter
+                    font.family: "monospace"
+                    font.pixelSize: 12
+                    color: Colors.fg
+                    clip: true
+                    echoMode: TextInput.Password
+                    Keys.onReturnPressed: menu.submitPassword(text)
+                    Keys.onEnterPressed: menu.submitPassword(text)
+                    Keys.onEscapePressed: menu.cancelPassword()
+                }
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: pwInput.text === ""
+                    font.family: "monospace"
+                    font.pixelSize: 12
+                    color: Colors.gray
+                    text: "password"
+                }
+            }
+            TextButton {
+                anchors.verticalCenter: parent.verticalCenter
+                label: "connect"
+                onClicked: menu.submitPassword(pwInput.text)
+            }
+            TextButton {
+                anchors.verticalCenter: parent.verticalCenter
+                label: "cancel"
+                baseColor: Colors.gray2
+                onClicked: menu.cancelPassword()
             }
         }
+    }
+
+    Text {
+        width: parent.width
+        visible: NetworkState.actionStatus !== ""
+        font.family: "monospace"
+        font.pixelSize: 12
+        color: NetworkState.actionStatus.startsWith("failed") || NetworkState.actionStatus.startsWith("busy")
+            ? Colors.red : Colors.acid
+        text: NetworkState.actionStatus
+        wrapMode: Text.Wrap
     }
 }
