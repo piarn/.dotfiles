@@ -1,18 +1,19 @@
-// Speaker + mic status, backed directly by Quickshell.Services.Pipewire
-// (no shelling out needed here — unlike Network/Bluetooth, this module's
-// reactive properties just work). PwObjectTracker is what makes
+// Speaker + mic status. Reads come from Quickshell.Services.Pipewire, whose
+// reactive properties just work; writes go through wpctl, same as sway's
+// volume keys. Writing PwNodeAudio.volume directly was unreliable on a
+// Bluetooth (a2dp) sink — a +0.06 write landed as +0.25 — so every
+// slider/wheel/mute action shells out instead. PwObjectTracker is what makes
 // Pipewire.defaultAudioSink/-Source's .audio properties live instead of
 // stale — it needs to exist somewhere in the loaded scene, so it lives
 // here rather than being duplicated in Bar.qml and both popups.
 pragma Singleton
+import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import QtQuick
 
 Item {
     id: root
-
-    property bool volumeMenuOpen: false
-    property bool micMenuOpen: false
 
     readonly property var sinkAudio: Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.audio : null
     readonly property var sourceAudio: Pipewire.defaultAudioSource ? Pipewire.defaultAudioSource.audio : null
@@ -51,13 +52,52 @@ Item {
         return root.sourceAudio.muted ? "\u{f036d}" : "\u{f036c}"
     }
 
-    function adjustVolume(delta) {
-        if (!root.sinkAudio) return
-        root.sinkAudio.volume = Math.max(0, Math.min(1.5, root.sinkAudio.volume + delta))
+    function toggleMute(audio) {
+        if (!audio) return
+        const target = audio === root.sourceAudio ? "@DEFAULT_AUDIO_SOURCE@" : "@DEFAULT_AUDIO_SINK@"
+        Quickshell.execDetached(["wpctl", "set-mute", target, "toggle"])
     }
 
-    function adjustMicVolume(delta) {
-        if (!root.sourceAudio) return
-        root.sourceAudio.volume = Math.max(0, Math.min(1.5, root.sourceAudio.volume + delta))
+    // Slider drags fire far faster than wpctl runs, so each writer keeps
+    // only the newest value queued. `target` remembers what was last asked
+    // for until the writer goes idle, so quick wheel steps build on each
+    // other instead of on a readback that hasn't caught up yet.
+    function setVolume(input, v) {
+        const w = input ? sourceWriter : sinkWriter
+        w.target = Math.max(0, Math.min(1, v))
+        const cmd = ["wpctl", "set-volume", input ? "@DEFAULT_AUDIO_SOURCE@" : "@DEFAULT_AUDIO_SINK@", w.target.toFixed(4)]
+        if (w.running) {
+            w.pending = cmd
+        } else {
+            w.command = cmd
+            w.running = true
+        }
     }
+
+    function adjust(input, delta) {
+        const w = input ? sourceWriter : sinkWriter
+        const audio = input ? root.sourceAudio : root.sinkAudio
+        if (!audio) return
+        setVolume(input, (w.target >= 0 ? w.target : audio.volume) + delta)
+    }
+
+    function adjustVolume(delta) { adjust(false, delta) }
+    function adjustMicVolume(delta) { adjust(true, delta) }
+
+    component VolumeWriter: Process {
+        property var pending: null
+        property real target: -1
+        onExited: {
+            if (pending) {
+                command = pending
+                pending = null
+                running = true
+            } else {
+                target = -1
+            }
+        }
+    }
+
+    VolumeWriter { id: sinkWriter }
+    VolumeWriter { id: sourceWriter }
 }

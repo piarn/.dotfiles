@@ -272,14 +272,17 @@ bindsym $mod+r mode "resize"
 #
 # Utilities:
 #
-    # Special keys to adjust volume via PulseAudio
-    bindsym --locked XF86AudioMute exec pactl set-sink-mute \@DEFAULT_SINK@ toggle
-    bindsym --locked XF86AudioLowerVolume exec pactl set-sink-volume \@DEFAULT_SINK@ -5%
-    bindsym --locked XF86AudioRaiseVolume exec pactl set-sink-volume \@DEFAULT_SINK@ +5%
-    bindsym --locked XF86AudioMicMute exec pactl set-source-mute \@DEFAULT_SOURCE@ toggle
-    # Special keys to adjust brightness via brightnessctl
-    bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
-    bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
+    # Volume keys via wireplumber's wpctl (pactl isn't installed). Steps of
+    # 1/16 to line up with the 16-segment OSD quickshell shows on change;
+    # -l 1.0 caps at 100%.
+    bindsym --locked XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+    bindsym --locked XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.0625-
+    bindsym --locked XF86AudioRaiseVolume exec wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 0.0625+
+    bindsym --locked XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+    # Brightness keys go through quickshell (logind SetBrightness, no
+    # brightnessctl needed), which also shows the OSD.
+    bindsym --locked XF86MonBrightnessDown exec $qs ipc call brightness down
+    bindsym --locked XF86MonBrightnessUp exec $qs ipc call brightness up
     # Full screen, straight to satty for annotation (crop/arrows/blur/
     # numbered markers/text/undo) — Enter saves + copies, see
     # ~/.rice/satty for the save location/theming. satty lives under
