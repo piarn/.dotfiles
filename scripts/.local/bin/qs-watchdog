@@ -12,6 +12,10 @@
 # the screen covered while no lock client exists, but there'd be no
 # password prompt to get back in.
 #
+# It also restarts quickshell when it's gone altogether (crashed), after
+# two checks in a row find no process — `quickshell -n` makes that safe to
+# race with sway's own exec_always on reload.
+#
 # Started from sway with exec_always; the flock keeps it to one instance.
 
 run="${XDG_RUNTIME_DIR:-/tmp}"
@@ -23,9 +27,30 @@ qs="$HOME/.local/bin/quickshell"
 exec 9>"$run/qs-watchdog.lock"
 flock -n 9 || exit 0
 
+restart() {
+    sleep 1
+    swaymsg -q exec "$qs -n"
+    if [ "$(cat "$lockflag" 2>/dev/null)" = 1 ]; then
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 1
+            "$qs" ipc call lock lock >/dev/null 2>&1 && break
+        done
+    fi
+}
+
 strikes=0
+missing=0
 while sleep 3; do
-    pid=$(pgrep -xo quickshell) || { strikes=0; continue; }
+    if ! pid=$(pgrep -xo quickshell); then
+        strikes=0
+        missing=$((missing + 1))
+        [ "$missing" -ge 2 ] || continue
+        logger -t qs-watchdog "quickshell not running (crashed?), restarting"
+        restart
+        missing=0
+        continue
+    fi
+    missing=0
     [ -f "$heartbeat" ] || continue
     now=$(date +%s)
     # a fresh instance hasn't written its first heartbeat yet
@@ -43,13 +68,6 @@ while sleep 3; do
     mkdir -p "$keep" && cp "$run/quickshell/by-pid/$pid/"log.* "$keep/" 2>/dev/null
     logger -t qs-watchdog "quickshell ($pid) unresponsive, restarting; log kept in $keep"
     kill -KILL "$pid"
-    sleep 1
-    swaymsg -q exec "$qs -n"
-    if [ "$(cat "$lockflag" 2>/dev/null)" = 1 ]; then
-        for _ in 1 2 3 4 5 6 7 8 9 10; do
-            sleep 1
-            "$qs" ipc call lock lock >/dev/null 2>&1 && break
-        done
-    fi
+    restart
     strikes=0
 done
