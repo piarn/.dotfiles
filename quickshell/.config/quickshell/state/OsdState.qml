@@ -44,9 +44,9 @@ Item {
         arm.restart()
     }
 
-    // The slider in these popups already shows the level.
+    // The quick settings sliders already show the level.
     function suppressed() {
-        return !armed || PopupState.isOpen("volume") || PopupState.isOpen("mic") || PopupState.isOpen("quicksettings")
+        return !armed || PopupState.isOpen("quicksettings")
     }
 
     Connections {

@@ -1,5 +1,6 @@
-// Icon + slider + percentage — the volume/mic/brightness rows in
-// QuickSettings. Left-clicking the icon or middle-clicking anywhere on the
+// [chevron] icon + slider + percentage — the volume/mic/brightness rows in
+// QuickSettings. The chevron (only drawn when `expandable`, but its space is
+// always kept so every row's icon lines up) emits expandClicked. Left-clicking the icon or middle-clicking anywhere on the
 // row emits toggled (mute for audio rows); the wheel over the slider emits
 // stepped(±delta).
 import QtQuick
@@ -11,9 +12,12 @@ Item {
     property string icon: ""
     property real value: 0
     property bool muted: false
+    property bool expandable: false
+    property bool expanded: false
     signal moved(real v)
     signal stepped(real delta)
     signal toggled()
+    signal expandClicked()
 
     width: parent ? parent.width : 0
     height: 22
@@ -26,8 +30,31 @@ Item {
     }
 
     Icon {
+        id: chevron
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        width: 14
+        visible: root.expandable
+        font.pixelSize: 14
+        color: root.expanded || chevronMouse.containsMouse ? Colors.neon : Colors.gray2
+        text: "\u{f0140}"
+        rotation: root.expanded ? 180 : 0
+        Behavior on rotation { NumberAnimation { duration: 120 } }
+
+        MouseArea {
+            id: chevronMouse
+            anchors.fill: parent
+            anchors.margins: -4
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.expandClicked()
+        }
+    }
+
+    Icon {
         id: glyph
         anchors.left: parent.left
+        anchors.leftMargin: 20
         anchors.verticalCenter: parent.verticalCenter
         width: 22
         font.pixelSize: 17

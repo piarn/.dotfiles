@@ -5,8 +5,9 @@
 //    opens the menu, middle click is the secondary action, wheel scrolls.
 //  - toggles: wi-fi, bluetooth, do not disturb, keep awake, power profile;
 //    the › on a tile opens that feature's full popup
-//  - volume/mic/brightness sliders (middle click mutes, wheel steps),
-//    battery, lock and power
+//  - volume/mic/brightness sliders (middle click mutes, wheel steps); the
+//    chevron before volume/mic lists the output/input devices to pick from
+//  - battery, lock and power
 import Quickshell
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
@@ -22,9 +23,17 @@ BarPopup {
     fixedWidth: 360
 
     property string hoveredTitle: ""
+    property string devicesShown: ""   // "" | "output" | "input"
     readonly property int tileWidth: (innerWidth - 8) / 2
 
-    onOpened: BrightnessState.refresh()
+    onOpened: {
+        devicesShown = ""
+        BrightnessState.refresh()
+    }
+
+    function toggleDevices(kind) {
+        devicesShown = devicesShown === kind ? "" : kind
+    }
 
     function openPopup(popupName) {
         PopupState.toggle(popupName, menu.screen)
@@ -203,6 +212,13 @@ BarPopup {
         onMoved: (v) => VolumeState.setVolume(false, v)
         onStepped: (d) => VolumeState.adjustVolume(d)
         onToggled: VolumeState.toggleMute(VolumeState.sinkAudio)
+        expandable: true
+        expanded: menu.devicesShown === "output"
+        onExpandClicked: menu.toggleDevices("output")
+    }
+
+    AudioDeviceList {
+        visible: menu.devicesShown === "output"
     }
 
     LevelRow {
@@ -213,6 +229,14 @@ BarPopup {
         onMoved: (v) => VolumeState.setVolume(true, v)
         onStepped: (d) => VolumeState.adjustMicVolume(d)
         onToggled: VolumeState.toggleMute(VolumeState.sourceAudio)
+        expandable: true
+        expanded: menu.devicesShown === "input"
+        onExpandClicked: menu.toggleDevices("input")
+    }
+
+    AudioDeviceList {
+        visible: menu.devicesShown === "input"
+        input: true
     }
 
     LevelRow {

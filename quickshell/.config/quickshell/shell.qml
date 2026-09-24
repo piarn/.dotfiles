@@ -22,8 +22,6 @@ ShellRoot {
     NetworkMenu {}
     BluetoothMenu {}
     BatteryMenu {}
-    AudioMenu { name: "volume" }
-    AudioMenu { name: "mic"; input: true }
     NotificationCenter {}
     QuickSettings {}
     NotificationToasts {}
@@ -31,7 +29,7 @@ ShellRoot {
     PowerMenu {}
     LockScreen {}
 
-    // `qs ipc call popup toggle <name>` — network, bluetooth, volume, mic,
+    // `qs ipc call popup toggle <name>` — network, bluetooth,
     // battery, notifications, quicksettings. Opens on the focused monitor.
     IpcHandler {
         target: "popup"
