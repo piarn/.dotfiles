@@ -289,6 +289,11 @@ bindsym $mod+r mode "resize"
     # save location/theming. satty lives under ~/.local/bin, off sway's
     # PATH, hence the full paths.
     bindsym $mod+Shift+s exec ~/.local/bin/screenshot-region
+    # Screen recording toggle: click a window, drag a region, or click a
+    # monitor's bar for all of it; press again or click the bar's red REC
+    # timer to stop. The mp4 lands in ~/Videos/Captures and on the
+    # clipboard. See the script.
+    bindsym $mod+Shift+r exec ~/.local/bin/screenrec
 
 #
 # Status Bar:

@@ -20,6 +20,7 @@ sway
 # (dnf), not verified on apt-based distros
 quickshell
 grim
+wf-recorder
 slurp
 wl-clipboard
 swayidle
