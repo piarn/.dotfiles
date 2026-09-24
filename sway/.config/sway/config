@@ -142,9 +142,10 @@ input "type:keyboard" {
     # (see the `-n` flag below), so a plain `reload` never picks up
     # changes to ~/.dots/quickshell's QML on its own — whether it does
     # depends on quickshell's own hot-reload, which isn't consistent
-    # across versions/machines. Killing it here makes `$mod+Shift+c`
-    # reliably reload quickshell too, everywhere.
-    bindsym $mod+Shift+c exec $qs kill -n; reload
+    # across versions/machines. SIGKILL rather than `qs kill`, which asks
+    # over IPC and so can't stop a hung instance — this doubles as the
+    # manual way out when a frozen popup is holding the keyboard/pointer.
+    bindsym $mod+Shift+c exec pkill -KILL -x quickshell; reload
 
     # Exit sway (logs you out of your Wayland session)
     bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
@@ -310,5 +311,8 @@ bindsym $mod+r mode "resize"
 # a PATH-based wrapper for this; set the search path here instead. Bump the
 # version below whenever quickshell is rebuilt against a newer Qt.
 exec_always env QML2_IMPORT_PATH=$HOME/.rice LD_LIBRARY_PATH=$HOME/Qt/6.8.0/gcc_64/lib quickshell -n
+# Kills and restarts quickshell if it hangs (a frozen popup would otherwise
+# hold all input); see the comment atop the script.
+exec_always ~/.local/bin/qs-watchdog
 
 include /etc/sway/config.d/*

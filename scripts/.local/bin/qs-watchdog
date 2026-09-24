@@ -1,0 +1,55 @@
+#!/bin/sh
+# Force-restarts quickshell when its main thread stops responding.
+#
+# Every bar popup is a fullscreen layer surface with exclusive keyboard
+# focus, so a quickshell that hangs with one open swallows all input until
+# it dies — plain `qs kill`/SIGTERM don't help, since both are handled on
+# the same frozen event loop. quickshell rewrites $XDG_RUNTIME_DIR/
+# quickshell-heartbeat every 2s (see shell.qml); two stale checks in a row
+# (the second one rules out "just resumed from suspend") get it SIGKILLed
+# and started again. If the session was locked at the time (LockScreen.qml
+# keeps quickshell-locked at 1/0), the new instance re-locks — sway keeps
+# the screen covered while no lock client exists, but there'd be no
+# password prompt to get back in.
+#
+# Started from sway with exec_always; the flock keeps it to one instance.
+
+run="${XDG_RUNTIME_DIR:-/tmp}"
+heartbeat="$run/quickshell-heartbeat"
+lockflag="$run/quickshell-locked"
+stale=10
+qs="$HOME/.local/bin/quickshell"
+
+exec 9>"$run/qs-watchdog.lock"
+flock -n 9 || exit 0
+
+strikes=0
+while sleep 3; do
+    pid=$(pgrep -xo quickshell) || { strikes=0; continue; }
+    [ -f "$heartbeat" ] || continue
+    now=$(date +%s)
+    # a fresh instance hasn't written its first heartbeat yet
+    [ "$(ps -o etimes= -p "$pid" | tr -d ' ')" -gt "$stale" ] 2>/dev/null || { strikes=0; continue; }
+    if [ $((now - $(stat -c %Y "$heartbeat"))) -gt "$stale" ]; then
+        strikes=$((strikes + 1))
+    else
+        strikes=0
+    fi
+    [ "$strikes" -ge 2 ] || continue
+
+    # keep the hung instance's log (it lives in tmpfs) for a post-mortem:
+    # `qs log ~/.cache/qs-watchdog/<time>/log.qslog`
+    keep="$HOME/.cache/qs-watchdog/$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$keep" && cp "$run/quickshell/by-pid/$pid/"log.* "$keep/" 2>/dev/null
+    logger -t qs-watchdog "quickshell ($pid) unresponsive, restarting; log kept in $keep"
+    kill -KILL "$pid"
+    sleep 1
+    swaymsg -q exec "$qs -n"
+    if [ "$(cat "$lockflag" 2>/dev/null)" = 1 ]; then
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 1
+            "$qs" ipc call lock lock >/dev/null 2>&1 && break
+        done
+    fi
+    strikes=0
+done

@@ -54,6 +54,7 @@ Item {
         id: sessionLock
 
         onLockStateChanged: {
+            lockFlag.setText(locked ? "1\n" : "0\n")
             if (locked) {
                 root.currentText = ""
                 root.showFailure = false
@@ -169,6 +170,14 @@ Item {
                 }
             }
         }
+    }
+
+    // Read by ~/.local/bin/qs-watchdog: if it has to kill a hung quickshell
+    // while this says 1, the restarted instance locks again.
+    FileView {
+        id: lockFlag
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-locked"
+        printErrors: false
     }
 
     PamContext {
