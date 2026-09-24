@@ -16,6 +16,10 @@
 //    so there's no click-outside signal. For keyboard-driven surfaces
 //    (launcher, power menu) and while a text field is open. Switching back
 //    to on-demand makes sway drop focus immediately.
+//    clickAwayCloses covers the missing click-outside for these: while
+//    shown, a transparent surface on every screen sits just under the
+//    card, and a click on it counts as dismissed() — the click itself is
+//    swallowed, not passed to the window beneath (same as rofi).
 // xdg_popup grabs would be the textbook answer, but sway doesn't honour
 // them for layer-shell popups.
 import Quickshell
@@ -37,12 +41,15 @@ PanelWindow {
     // What gets keyboard focus when shown (e.g. the launcher's search field).
     property Item initialFocus: catcher
     property bool needsKeyboard: false
+    property bool clickAwayCloses: false
     // Leaving exclusive mode drops focus; don't treat that as a dismissal.
     onNeedsKeyboardChanged: if (!needsKeyboard) { hadFocus = false; blurCheck.stop() }
 
     // Take keyboard focus back from a text field so Escape works again.
     function focusCatcher() { catcher.forceActiveFocus() }
 
+    // Overlay so the card stays above its Top-layer click-away catchers.
+    WlrLayershell.layer: clickAwayCloses ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: needsKeyboard ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand
     // Bar popups: zone 0 so sway places them below the bar's exclusive zone.
     // Centered ones: no anchors at all, which layer-shell centers on the output.
@@ -56,6 +63,33 @@ PanelWindow {
     implicitHeight: cardHeight
 
     property bool hadFocus: false
+
+    Variants {
+        model: root.clickAwayCloses ? Quickshell.screens : []
+
+        delegate: PanelWindow {
+            required property var modelData
+            screen: modelData
+            visible: root.visible
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+            exclusionMode: ExclusionMode.Ignore
+            color: "transparent"
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            WlrLayershell.namespace: "quickshell-clickaway"
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.AllButtons
+                onPressed: root.dismissed()
+            }
+        }
+    }
 
     onVisibleChanged: {
         if (visible) {

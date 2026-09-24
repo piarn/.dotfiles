@@ -17,6 +17,7 @@ CardWindow {
     visible: false
     centered: true
     needsKeyboard: true
+    clickAwayCloses: true
     cardWidth: 560
     cardHeight: body.implicitHeight + 24
     initialFocus: search.input

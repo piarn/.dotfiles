@@ -14,6 +14,7 @@ CardWindow {
     visible: false
     centered: true
     needsKeyboard: true
+    clickAwayCloses: true
     cardWidth: content.implicitWidth + 32
     cardHeight: content.implicitHeight + 24
     initialFocus: keys

@@ -55,7 +55,7 @@ Alt is left to apps.
 | Keys | Action |
 | --- | --- |
 | `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |
-| `$mod+Space` (or `$mod+d`) | app launcher |
+| `$mod+Space` (or `$mod+d`) | launcher (see below) |
 | `$mod+q` | close window |
 | `$mod+v` | clipboard history (cliphist) |
 | `$mod+e` | file manager (Dolphin) |
@@ -75,6 +75,21 @@ Alt is left to apps.
 | `$mod+Escape` | lock |
 | `$mod+Shift+Escape` | power menu (incl. logout) |
 | `$mod+Shift+c` | reload sway and restart quickshell |
+
+The launcher searches apps by name, description and keywords ("pdf" finds
+Zathura), most-used first. A leading character switches mode:
+
+| Prefix | Mode |
+| --- | --- |
+| `=` | calculator (`=2^10*3`, `sqrt`, `pi`); Enter copies the result |
+| `:` | system actions: lock, reload, suspend, logout, reboot, shutdown, `:theme <name>`, `:layout <name>` |
+| `>` | shell command; Enter runs it in kitty, Shift+Enter in the background |
+| `/` | files under `~` via fd (empty: recently opened); Shift+Enter shows it in Dolphin |
+| `?` | web search (or open an address) |
+| `@` | switch to an open window |
+
+`qs ipc call launcher open '<text>'` opens it pre-typed, e.g. `'@'` to
+bind a key straight to the window switcher.
 
 Everything else (Wi-Fi incl. enterprise/hidden networks, Bluetooth, audio
 devices, night light, keep awake, power profile, tray) lives in the bar's
