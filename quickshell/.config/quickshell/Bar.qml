@@ -135,6 +135,45 @@ Variants {
                 anchors.centerIn: parent
                 spacing: 16
 
+                // Only while ~/.local/bin/screenrec records; click to stop.
+                Item {
+                    visible: RecorderState.recording
+                    anchors.verticalCenter: parent.verticalCenter
+                    implicitWidth: recRow.implicitWidth
+                    implicitHeight: recRow.implicitHeight
+
+                    Row {
+                        id: recRow
+                        spacing: 5
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.family: "monospace"
+                            font.pixelSize: 11
+                            color: Colors.red
+                            text: "●"
+                            SequentialAnimation on opacity {
+                                running: RecorderState.recording
+                                loops: Animation.Infinite
+                                NumberAnimation { to: 0.3; duration: 700 }
+                                NumberAnimation { to: 1; duration: 700 }
+                            }
+                        }
+                        MonoText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Colors.red
+                            text: RecorderState.elapsedText()
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: RecorderState.stop()
+                    }
+                }
+
                 // Icon follows the *primary* device (lowest-metric default
                 // route), i.e. where traffic actually goes; every interface is
                 // listed in NetworkMenu. VPN glyph appended while one is up.
