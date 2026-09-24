@@ -172,12 +172,16 @@ Item {
         }
     }
 
-    // Read by ~/.local/bin/qs-watchdog: if it has to kill a hung quickshell
-    // while this says 1, the restarted instance locks again.
+    // 1 while locked. Any instance that starts up (crash, restart, config
+    // reload) and finds 1 here locks again straight away: when the lock
+    // client goes away while locked, sway keeps the screen covered in solid
+    // red with no password prompt, and a new lock client is the only way
+    // back in short of killing the session.
     FileView {
         id: lockFlag
         path: Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-locked"
         printErrors: false
+        onLoaded: if (text().trim() === "1" && !sessionLock.locked) sessionLock.locked = true
     }
 
     PamContext {
