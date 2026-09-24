@@ -45,6 +45,33 @@ whichever screen layout matches what's connected
 (`~/.rice/bin/apply-layout --auto`). Both are safe to re-run any time; see
 `~/.rice/README.md` for how theming and screen layouts actually work.
 
+## Desktop
+
+sway + [quickshell](quickshell/.config/quickshell) (bar, popups, launcher,
+lock screen, notifications). Bindings beyond sway's defaults:
+
+| Keys | Action |
+| --- | --- |
+| `$mod+d` | app launcher |
+| `$mod+Shift+v` | clipboard history (cliphist) |
+| `$mod+Shift+s` | region screenshot: frozen screen in satty, crop, Enter saves + copies |
+| `$mod+Shift+r` | start/stop screen recording to `~/Videos/Captures` (click a window, drag a region, or click a monitor's bar) |
+| `$mod+Escape` | lock |
+| `$mod+Shift+Escape` | power menu |
+| `$mod+Shift+c` | reload sway and restart quickshell |
+
+Everything else (Wi-Fi incl. enterprise/hidden networks, Bluetooth, audio
+devices, night light, keep awake, power profile, tray) lives in the bar's
+popups and the ≡ quick settings.
+
+If quickshell hangs or crashes, `qs-watchdog` restarts it within ~15s
+(re-locking if the session was locked) and keeps a hung instance's log
+under `~/.cache/qs-watchdog/`. `$mod+Shift+c` does the same by hand.
+
+New files in a package need `stow -R --no-folding -t ~ <pkg>` before
+they're linked in — quickshell reports a new QML file as "X is not a
+type" until then.
+
 ## Adding a package
 
 ```
