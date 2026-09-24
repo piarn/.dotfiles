@@ -48,16 +48,32 @@ whichever screen layout matches what's connected
 ## Desktop
 
 sway + [quickshell](quickshell/.config/quickshell) (bar, popups, launcher,
-lock screen, notifications). Bindings beyond sway's defaults:
+lock screen, notifications). The rule: `$mod`+letter is the everyday
+action, `$mod+Shift` is the bigger version (move, capture, system). Plain
+Alt is left to apps.
 
 | Keys | Action |
 | --- | --- |
-| `$mod+d` | app launcher |
-| `$mod+Shift+v` | clipboard history (cliphist) |
+| `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |
+| `$mod+Space` (or `$mod+d`) | app launcher |
+| `$mod+q` | close window |
+| `$mod+v` | clipboard history (cliphist) |
+| `$mod+e` | file manager (Dolphin) |
+| `$mod+b` | browser (Firefox) |
+| `$mod+h/j/k/l`, arrows | focus; add Shift to move the window |
+| `$mod+1`–`0` | workspace; add Shift to send the window there |
+| `$mod+t` | toggle split direction (side by side ↔ stacked) |
+| `$mod+w` | toggle tabbed ↔ tiled |
+| `$mod+f` / `$mod+Shift+f` | maximize / fullscreen |
+| `$mod+Shift+t` | toggle floating |
+| `$mod+Tab` | focus between tiled and floating windows |
+| `$mod+a` | focus parent container |
+| `$mod+r` | resize mode (hjkl/arrows, Enter or Esc to leave) |
+| `$mod+minus` / `$mod+Shift+minus` | show / send to scratchpad |
 | `$mod+Shift+s` | region screenshot: frozen screen in satty, crop, Enter saves + copies |
 | `$mod+Shift+r` | start/stop screen recording to `~/Videos/Captures` (click a window, drag a region, or click a monitor's bar) |
 | `$mod+Escape` | lock |
-| `$mod+Shift+Escape` | power menu |
+| `$mod+Shift+Escape` | power menu (incl. logout) |
 | `$mod+Shift+c` | reload sway and restart quickshell |
 
 Everything else (Wi-Fi incl. enterprise/hidden networks, Bluetooth, audio

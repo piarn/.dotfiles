@@ -26,6 +26,9 @@ seat seat0 xcursor_theme Adwaita 24
 # $mod+Shift+Return below) since it's the lighter of the two.
 set $term kitty
 set $term_fast foot
+# File manager and browser (both flatpaks)
+set $files flatpak run org.kde.dolphin
+set $browser flatpak run org.mozilla.firefox
 # Your preferred application launcher
 #
 # `qs` (quickshell) links against Qt's private ABI and must run against the
@@ -77,7 +80,7 @@ exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DE
 # changes, pkexec, disk tools); without an agent they fail silently.
 exec /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
 #
-# Clipboard history for quickshell's picker ($mod+Shift+v): cliphist
+# Clipboard history for quickshell's picker ($mod+v): cliphist
 # stores every copy. Skipped until installed.
 exec sh -c 'command -v cliphist >/dev/null && exec wl-paste --watch cliphist store'
 #
@@ -136,6 +139,12 @@ input "type:keyboard" {
 
 ### Key bindings
 #
+# One rule throughout: $mod+<letter> is the everyday action, named by its
+# first letter where possible; $mod+Shift is the bigger version — move
+# things, capture the screen, or system actions (reload, power menu).
+# Nothing ends the session directly: logout sits behind the power menu.
+# Plain Alt is left alone for apps (Firefox, nvim, tmux).
+#
 # Basics:
 #
     # Start a terminal
@@ -143,14 +152,19 @@ input "type:keyboard" {
     # Start the lightweight terminal (foot) for quick/throwaway launches
     bindsym $mod+Shift+Return exec $term_fast
 
-    # Kill focused window
-    bindsym $mod+Shift+q kill
+    # Close (quit) the focused window
+    bindsym $mod+q kill
 
-    # Start your launcher
+    # Start your launcher ($mod+d kept as an alias)
+    bindsym $mod+space exec $menu
     bindsym $mod+d exec $menu
 
     # Clipboard history picker (quickshell, fed by cliphist)
-    bindsym $mod+Shift+v exec $qs ipc call clipboard toggle
+    bindsym $mod+v exec $qs ipc call clipboard toggle
+
+    # File manager (explorer) and browser
+    bindsym $mod+e exec $files
+    bindsym $mod+b exec $browser
 
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
@@ -169,8 +183,7 @@ input "type:keyboard" {
     # manual way out when a frozen popup is holding the keyboard/pointer.
     bindsym $mod+Shift+c exec pkill -KILL -x quickshell; reload
 
-    # Exit sway (logs you out of your Wayland session)
-    bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
+    # No dedicated exit-sway bind: logout lives in the power menu below.
 
     # Lock the screen — quickshell's own session-lock surface (Toxic-themed,
     # blurred screenshot background), see
@@ -178,7 +191,7 @@ input "type:keyboard" {
     bindsym $mod+Escape exec $qs ipc call lock lock
 
     # Power menu (lock/suspend/reboot/shutdown/logout) — the deliberate next
-    # step up from Mod+Escape's direct lock
+    # step up from the direct lock
     bindsym $mod+Shift+Escape exec $qs ipc call powermenu toggle
 #
 # Moving around:
@@ -234,25 +247,21 @@ input "type:keyboard" {
 #
 # Layout stuff:
 #
-    # You can "split" the current object of your focus with
-    # $mod+b or $mod+v, for horizontal and vertical splits
-    # respectively.
-    bindsym $mod+b splith
-    bindsym $mod+v splitv
+    # Toggle whether the focused container splits side by side or stacked
+    # top/bottom
+    bindsym $mod+t layout toggle split
 
-    # Switch the current container between different layout styles
-    bindsym $mod+s layout stacking
-    bindsym $mod+w layout tabbed
-    bindsym $mod+e layout toggle split
+    # Switch the current container between tabbed and tiled
+    bindsym $mod+w layout toggle tabbed split
 
     # Make the current focus fullscreen
     bindsym $mod+Shift+f fullscreen
     bindsym $mod+f resize set width 100 ppt; resize set height 100 ppt
     # Toggle the current focus between tiling and floating mode
-    bindsym $mod+Shift+space floating toggle
+    bindsym $mod+Shift+t floating toggle
 
     # Swap focus between the tiling area and the floating area
-    bindsym $mod+space focus mode_toggle
+    bindsym $mod+Tab focus mode_toggle
 
     # Move focus to the parent container
     bindsym $mod+a focus parent

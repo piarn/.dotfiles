@@ -1,5 +1,5 @@
 // Clipboard history picker, toggled with `qs ipc call clipboard toggle`
-// ($mod+Shift+v in sway). History comes from cliphist, which sway feeds
+// ($mod+v in sway). History comes from cliphist, which sway feeds
 // with `wl-paste --watch cliphist store`. Type to filter, ↑/↓ to move,
 // Enter copies the entry back to the clipboard, Delete removes it.
 //
