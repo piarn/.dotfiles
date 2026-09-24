@@ -258,8 +258,7 @@ Item {
             }
         }
         assignIfChanged("wifiNetworks", Object.values(nets)
-            .sort((a, b) => (b.active - a.active) || (b.known - a.known) || (b.signal - a.signal))
-            .slice(0, 10))
+            .sort((a, b) => (b.active - a.active) || (b.known - a.known) || (b.signal - a.signal)))
 
         const typeMap = { ethernet: "ethernet", wifi: "wifi", gsm: "wwan", cdma: "wwan" }
         const devs = []

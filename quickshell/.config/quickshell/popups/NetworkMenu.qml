@@ -21,8 +21,24 @@ BarPopup {
     property string lastAttempted: ""
     property var pwNet: null   // network whose password row is open
     readonly property string pwFor: pwNet ? pwNet.ssid : ""
-    // exclusive keyboard while typing a password, see CardWindow
-    needsKeyboard: pwFor !== ""
+    // exclusive keyboard while typing a password or searching, see CardWindow
+    needsKeyboard: pwFor !== "" || searching
+    property bool searching: false
+
+    readonly property var shownNetworks: {
+        if (!NetworkState.wifiEnabled) return []
+        const words = searchInput.text.toLowerCase().split(/\s+/).filter(w => w)
+        if (!words.length) return NetworkState.wifiNetworks
+        return NetworkState.wifiNetworks.filter(n => {
+            const ssid = n.ssid.toLowerCase()
+            return words.every(w => ssid.includes(w))
+        })
+    }
+
+    function stopSearch() {
+        searching = false
+        focusCatcher()
+    }
 
     readonly property int routedCount: NetworkState.devices.filter(d => d.connected && d.gateway).length
 
@@ -53,7 +69,8 @@ BarPopup {
 
     function cancelPassword() {
         pwNet = null
-        focusCatcher()
+        if (searching) searchInput.forceActiveFocus()
+        else focusCatcher()
     }
 
     function deviceTitle(dev) {
@@ -81,6 +98,8 @@ BarPopup {
 
     onOpened: {
         pwNet = null
+        searching = false
+        searchInput.text = ""
         NetworkState.actionStatus = ""
         NetworkState.refresh()
         NetworkState.scan()
@@ -348,90 +367,200 @@ BarPopup {
             }
         }
 
-        Repeater {
-            model: NetworkState.wifiEnabled ? NetworkState.wifiNetworks : []
+        // Search, for places with a lot of networks (offices broadcast
+        // hundreds): space-separated words, all must appear in the SSID.
+        Rectangle {
+            width: parent.width
+            height: 24
+            visible: NetworkState.wifiEnabled
+            radius: 3
+            color: Colors.surface
+            border.color: searchInput.activeFocus ? Colors.neon : Colors.dim
+            border.width: 1
 
-            delegate: Column {
+            Text {
+                id: searchIcon
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: "Symbols Nerd Font Mono"
+                font.pixelSize: 12
+                color: Colors.gray
+                text: "\u{f002}"
+            }
+
+            TextInput {
+                id: searchInput
+                anchors.left: searchIcon.right
+                anchors.right: clearSearch.left
+                anchors.leftMargin: 6
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: "monospace"
+                font.pixelSize: 12
+                color: Colors.fg
+                clip: true
+                onActiveFocusChanged: if (activeFocus) menu.searching = true
+                onTextChanged: netList.keptY = 0
+                Keys.onEscapePressed: {
+                    if (text !== "") text = ""
+                    else menu.stopSearch()
+                }
+                // Enter picks the top match.
+                Keys.onReturnPressed: if (menu.shownNetworks.length) menu.clickNetwork(menu.shownNetworks[0])
+                Keys.onEnterPressed: if (menu.shownNetworks.length) menu.clickNetwork(menu.shownNetworks[0])
+            }
+
+            Text {
+                anchors.left: searchInput.left
+                anchors.verticalCenter: parent.verticalCenter
+                visible: searchInput.text === ""
+                font.family: "monospace"
+                font.pixelSize: 12
+                color: Colors.gray
+                text: "search " + NetworkState.wifiNetworks.length + " networks"
+            }
+
+            Text {
+                id: clearSearch
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                visible: searchInput.text !== ""
+                width: visible ? implicitWidth : 0
+                font.family: "Symbols Nerd Font Mono"
+                font.pixelSize: 12
+                color: clearMouse.containsMouse ? Colors.fg : Colors.gray
+                text: "\u{f00d}"
+
+                MouseArea {
+                    id: clearMouse
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: searchInput.text = ""
+                }
+            }
+        }
+
+        Text {
+            visible: NetworkState.wifiEnabled && searchInput.text !== "" && menu.shownNetworks.length === 0
+            leftPadding: 8
+            font.family: "monospace"
+            font.pixelSize: 12
+            color: Colors.gray
+            text: "no networks match"
+        }
+
+        // ListView rather than a Repeater: with hundreds of networks only
+        // the visible rows get built. Scrolls past 8 rows (28px + 2px
+        // spacing) so the popup never runs off the screen.
+        ListView {
+            id: netList
+            width: parent.width
+            height: Math.min(contentHeight, 8 * 30)
+            visible: count > 0
+            spacing: 2
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
+            model: menu.shownNetworks
+
+            // A new model (every poll where anything changed) jumps a
+            // ListView back to the top; keep the scroll position instead.
+            property real keptY: 0
+            onContentYChanged: if (moving || dragging) keptY = contentY
+            onMovementEnded: keptY = contentY
+            onModelChanged: Qt.callLater(() => { netList.contentY = Math.min(netList.keptY, Math.max(0, netList.contentHeight - netList.height)) })
+
+            delegate: Rectangle {
                 id: netRow
                 required property var modelData
-                width: menu.innerWidth
-                spacing: 4
+                width: ListView.view.width
+                height: 28
+                radius: 4
+                color: netRow.modelData.active ? Colors.dim
+                    : netMouse.containsMouse ? Colors.surface : "transparent"
 
-                Rectangle {
-                    width: parent.width
-                    height: 28
-                    radius: 4
-                    color: netRow.modelData.active ? Colors.dim
-                        : netMouse.containsMouse ? Colors.surface : "transparent"
+                MouseArea {
+                    id: netMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: netRow.modelData.active ? Qt.ArrowCursor : Qt.PointingHandCursor
+                    onClicked: menu.clickNetwork(netRow.modelData)
+                }
 
-                    MouseArea {
-                        id: netMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: netRow.modelData.active ? Qt.ArrowCursor : Qt.PointingHandCursor
-                        onClicked: menu.clickNetwork(netRow.modelData)
-                    }
+                Text {
+                    id: netIcon
+                    anchors.left: parent.left
+                    anchors.leftMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 18
+                    font.family: "Symbols Nerd Font Mono"
+                    font.pixelSize: 15
+                    color: netRow.modelData.active ? Colors.neon : Colors.gray2
+                    text: NetworkState.wifiGlyph(netRow.modelData.signal)
+                }
 
-                    Text {
-                        id: netIcon
-                        anchors.left: parent.left
-                        anchors.leftMargin: 8
+                Text {
+                    anchors.left: netIcon.right
+                    anchors.right: netRight.left
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: "monospace"
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
+                    color: netRow.modelData.active ? Colors.neon : Colors.fg
+                    text: netRow.modelData.ssid
+                }
+
+                Row {
+                    id: netRight
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    // only saved networks have something to forget,
+                    // so this doubles as the "saved" marker
+                    TextButton {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 18
+                        visible: netRow.modelData.known
+                        label: "forget"
+                        baseColor: Colors.gray
+                        enabled: !NetworkState.busy
+                        onClicked: NetworkState.forgetWifi(netRow.modelData.ssid)
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
                         font.family: "Symbols Nerd Font Mono"
-                        font.pixelSize: 15
-                        color: netRow.modelData.active ? Colors.neon : Colors.gray2
-                        text: NetworkState.wifiGlyph(netRow.modelData.signal)
+                        font.pixelSize: 12
+                        color: Colors.gray2
+                        text: netRow.modelData.security ? "\u{f033e}" : ""
                     }
-
                     Text {
-                        anchors.left: netIcon.right
-                        anchors.right: netRight.left
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
+                        width: 30
+                        horizontalAlignment: Text.AlignRight
                         font.family: "monospace"
-                        font.pixelSize: 13
-                        elide: Text.ElideRight
-                        color: netRow.modelData.active ? Colors.neon : Colors.fg
-                        text: netRow.modelData.ssid
-                    }
-
-                    Row {
-                        id: netRight
-                        anchors.right: parent.right
-                        anchors.rightMargin: 8
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 8
-
-                        // only saved networks have something to forget,
-                        // so this doubles as the "saved" marker
-                        TextButton {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: netRow.modelData.known
-                            label: "forget"
-                            baseColor: Colors.gray
-                            enabled: !NetworkState.busy
-                            onClicked: NetworkState.forgetWifi(netRow.modelData.ssid)
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: "Symbols Nerd Font Mono"
-                            font.pixelSize: 12
-                            color: Colors.gray2
-                            text: netRow.modelData.security ? "\u{f033e}" : ""
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 30
-                            horizontalAlignment: Text.AlignRight
-                            font.family: "monospace"
-                            font.pixelSize: 11
-                            color: Colors.gray2
-                            text: netRow.modelData.signal + "%"
-                        }
+                        font.pixelSize: 11
+                        color: Colors.gray2
+                        text: netRow.modelData.signal + "%"
                     }
                 }
+            }
+
+            Rectangle {
+                visible: netList.interactive
+                parent: netList
+                x: netList.width - width
+                y: netList.visibleArea.yPosition * netList.height
+                width: 3
+                height: netList.visibleArea.heightRatio * netList.height
+                radius: 1.5
+                color: Colors.gray
             }
         }
 
