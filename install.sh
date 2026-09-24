@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish foot git kitty lazydocker lazygit nvim quickshell ripgrep satty scripts sway tmux yazi)
+PACKAGES=(bash bat fd firefox fish foot git hidden-apps kde kitty lazydocker lazygit nvim quickshell ripgrep satty scripts sway tmux yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
 RICE_REPO="git@github.com:piarn/.rice.git"
@@ -252,6 +252,22 @@ install_pam_lock_config() {
     echo "$content" | sudo tee "$pam_file" >/dev/null
 }
 
+# The KDE flatpaks (Dolphin, Gwenview, Ark) already read the host's
+# ~/.config/kdeglobals (stowed from ./kde, a symlink into ~/.rice), but
+# outside a Plasma session Qt never loads KDE's platform theme, so they
+# ignore its colors and fall back to stock Breeze Dark. Forcing it per app
+# makes them follow the rice palette. Apps that aren't installed are skipped.
+KDE_FLATPAKS=(org.kde.dolphin org.kde.gwenview org.kde.ark)
+
+install_kde_flatpak_theme() {
+    command -v flatpak >/dev/null 2>&1 || return
+    local app
+    for app in "${KDE_FLATPAKS[@]}"; do
+        flatpak info "$app" >/dev/null 2>&1 || continue
+        flatpak override --user --env=QT_QPA_PLATFORMTHEME=kde "$app"
+    done
+}
+
 install_lazygit() {
     install_from_github_release lazygit jesseduffield/lazygit "linux_${RELEASE_ARCH}.tar.gz" lazygit
 }
@@ -301,6 +317,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 install_fish_plugins
+install_kde_flatpak_theme
 install_tpm
 "$HOME/.tmux/plugins/tpm/bin/install_plugins" >/dev/null 2>&1 || true
 
