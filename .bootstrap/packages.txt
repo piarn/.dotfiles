@@ -21,6 +21,7 @@ sway
 quickshell
 grim
 wf-recorder
+cliphist
 slurp
 wl-clipboard
 swayidle

@@ -6,10 +6,10 @@
 //
 // Layout: state/ holds the pragma-Singleton status backends, popups/ holds
 // the click-to-open menus plus the free-standing surfaces (Launcher,
-// PowerMenu, LockScreen, toasts, OSD), components/ holds shared UI pieces
-// (BarPopup is the shell every bar popup is built on). Bar.qml and this
-// file stay at the root since every popup/state type ends up wired through
-// one or the other.
+// ClipboardMenu, PowerMenu, LockScreen, toasts, OSD), components/ holds
+// shared UI pieces (BarPopup is the shell every bar popup is built on).
+// Bar.qml and this file stay at the root since every popup/state type ends
+// up wired through one or the other.
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -19,6 +19,7 @@ import "./state"
 ShellRoot {
     Bar {}
     Launcher {}
+    ClipboardMenu {}
     NetworkMenu {}
     BluetoothMenu {}
     BatteryMenu {}

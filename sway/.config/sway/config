@@ -77,6 +77,10 @@ exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DE
 # changes, pkexec, disk tools); without an agent they fail silently.
 exec /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
 #
+# Clipboard history for quickshell's picker ($mod+Shift+v): cliphist
+# stores every copy. Skipped until installed.
+exec sh -c 'command -v cliphist >/dev/null && exec wl-paste --watch cliphist store'
+#
 # Example configuration:
 #
 #   output HDMI-A-1 resolution 1920x1080 position 1920,0
@@ -140,6 +144,9 @@ input "type:keyboard" {
 
     # Start your launcher
     bindsym $mod+d exec $menu
+
+    # Clipboard history picker (quickshell, fed by cliphist)
+    bindsym $mod+Shift+v exec $qs ipc call clipboard toggle
 
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
