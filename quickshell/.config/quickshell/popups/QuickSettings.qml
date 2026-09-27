@@ -1,14 +1,21 @@
-// Quick settings, opened from the ≡ at the end of the bar. Three parts:
+// Quick settings, opened from the ≡ at the end of the bar (or $mod+n) —
+// the bar's only widget, so this is the way into every other popup, which
+// then offers a ‹ back here. Parts:
 //  - tray: the StatusNotifierItem icons apps register (Slack, nm-applet, …)
 //    — the bar has no tray of its own, like Windows' hidden-icons flyout.
 //    Left click activates (menu-only items open their menu), right click
 //    opens the menu, middle click is the secondary action, wheel scrolls.
-//  - toggles: wi-fi, bluetooth, do not disturb, keep awake, night light,
-//    power profile; the › on a tile opens that feature's full popup
+//  - the newest notifications, with [all] for the full list
+//  - toggles: network (what traffic goes over, VPNs included; click for
+//    the network popup), bluetooth, do not disturb, keep awake, night
+//    light, power profile; the › on a tile opens that feature's full popup
+//    (bluetooth's is a section of the network popup)
 //  - volume/mic/brightness sliders (middle click mutes, wheel steps); the
 //    chevron before volume/mic lists the output/input devices to pick from
-//  - battery, lock and power
+//  - media controls for the MPRIS player that's playing (or was last)
+//  - battery (click for details), lock and power
 import Quickshell
+import Quickshell.Services.Mpris
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
 import Quickshell.Widgets
@@ -36,7 +43,23 @@ BarPopup {
     }
 
     function openPopup(popupName) {
-        PopupState.toggle(popupName, menu.screen)
+        PopupState.toggle(popupName, menu.screen, "quicksettings")
+    }
+
+    // Names of the VPNs up right now: NetworkManager profiles (minus the
+    // interfaces provider extras own, like wg0-mullvad) and provider extras.
+    readonly property var activeVpns: {
+        const hidden = [].concat(...ExtrasState.vpns.map(v => Array.from(v.interfaces)))
+        return NetworkState.vpns.filter(v => v.active && !hidden.some(h => v.name.startsWith(h))).map(v => v.name)
+            .concat(ExtrasState.vpns.filter(v => v.available && v.active).map(v => v.name))
+    }
+
+    readonly property var primaryNet: NetworkState.primary
+
+    // Playing player first, else whichever is paused with a track loaded.
+    readonly property var player: {
+        const players = Mpris.players.values
+        return players.find(p => p.isPlaying) || players.find(p => p.trackTitle) || null
     }
 
     function profileName(p) {
@@ -139,21 +162,69 @@ BarPopup {
 
     Divider {}
 
+    // newest notifications — the rest behind [all]
+    Item {
+        visible: NotificationState.notifications.length > 0
+        width: parent.width
+        height: visible ? allBtn.implicitHeight : 0
+
+        MonoText {
+            anchors.left: parent.left
+            color: Colors.gray
+            text: "notifications · " + NotificationState.notifications.length
+        }
+        Row {
+            anchors.right: parent.right
+            spacing: 12
+
+            TextButton {
+                label: "clear all"
+                onClicked: NotificationState.clearAll()
+            }
+            TextButton {
+                id: allBtn
+                label: "all"
+                onClicked: menu.openPopup("notifications")
+            }
+        }
+    }
+
+    Repeater {
+        model: NotificationState.notifications.slice(-3).reverse()
+
+        delegate: NotificationCard {
+            required property var modelData
+            width: menu.innerWidth
+            notification: modelData
+        }
+    }
+
+    Divider {
+        visible: NotificationState.notifications.length > 0
+    }
+
     // toggles
     Grid {
         columns: 2
         spacing: 8
 
+        // What traffic actually goes over; highlighted while a VPN is up.
+        // Wi-Fi on/off is in the network popup's header.
         ToggleTile {
             width: menu.tileWidth
-            icon: NetworkState.wifiEnabled ? "\u{f05a9}" : "\u{f05aa}"
-            title: "Wi-Fi"
-            subtitle: !NetworkState.wifiEnabled ? "off"
-                : NetworkState.wifiDevice && NetworkState.wifiDevice.connected ? NetworkState.wifiDevice.connection
-                : "not connected"
-            active: NetworkState.wifiEnabled
+            icon: menu.activeVpns.length ? "\u{f0582}" : NetworkState.icon(menu.primaryNet)
+            title: !menu.primaryNet || !menu.primaryNet.connected ? "Offline"
+                : menu.primaryNet.type === "wifi" ? menu.primaryNet.connection
+                : menu.primaryNet.type === "wwan" ? "Mobile" : "Ethernet"
+            subtitle: {
+                const p = menu.primaryNet
+                const link = !p || !p.connected ? (NetworkState.wifiEnabled ? "not connected" : "wi-fi off")
+                    : p.type === "wifi" ? "wi-fi " + p.signal + "%" : p.type === "wwan" ? "mobile" : "wired"
+                return [link].concat(menu.activeVpns).join(" · ")
+            }
+            active: menu.activeVpns.length > 0
             hasDetail: true
-            onToggled: NetworkState.setWifiEnabled(!NetworkState.wifiEnabled)
+            onToggled: menu.openPopup("network")
             onDetail: menu.openPopup("network")
         }
 
@@ -168,14 +239,16 @@ BarPopup {
             active: BluetoothState.powered
             hasDetail: true
             onToggled: BluetoothState.togglePower()
-            onDetail: menu.openPopup("bluetooth")
+            onDetail: menu.openPopup("network")
         }
 
         ToggleTile {
             width: menu.tileWidth
             icon: NotificationState.dnd ? "\u{f009b}" : "\u{f009a}"
             title: "Silence"
-            subtitle: NotificationState.dnd ? "toasts hidden" : "off"
+            subtitle: [NotificationState.dnd ? "toasts hidden" : "off",
+                       NotificationState.notifications.length ? NotificationState.notifications.length + " unread" : ""]
+                .filter(s => s).join(" · ")
             active: NotificationState.dnd
             hasDetail: true
             onToggled: NotificationState.toggleDnd()
@@ -257,6 +330,77 @@ BarPopup {
         onStepped: (d) => BrightnessState.set(BrightnessState.value + d)
     }
 
+    // media
+    Item {
+        visible: menu.player !== null
+        width: parent.width
+        height: visible ? 34 : 0
+
+        Column {
+            anchors.left: parent.left
+            anchors.right: mediaButtons.left
+            anchors.leftMargin: 4
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 1
+
+            MonoText {
+                width: parent.width
+                elide: Text.ElideRight
+                color: Colors.fg
+                text: menu.player ? menu.player.trackTitle || menu.player.identity : ""
+            }
+            MonoText {
+                width: parent.width
+                visible: text !== ""
+                elide: Text.ElideRight
+                font.pixelSize: 11
+                color: Colors.gray2
+                text: menu.player ? [menu.player.trackArtist, menu.player.identity]
+                    .filter(s => s && s !== menu.player.trackTitle).join(" · ") : ""
+            }
+        }
+
+        Row {
+            id: mediaButtons
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+
+            Repeater {
+                model: [
+                    { glyph: "\u{f04ae}", enabled: menu.player && menu.player.canGoPrevious, act: () => menu.player.previous() },
+                    { glyph: menu.player && menu.player.isPlaying ? "\u{f03e4}" : "\u{f040a}",
+                      enabled: menu.player && menu.player.canTogglePlaying, act: () => menu.player.togglePlaying() },
+                    { glyph: "\u{f04ad}", enabled: menu.player && menu.player.canGoNext, act: () => menu.player.next() },
+                ]
+
+                delegate: Rectangle {
+                    required property var modelData
+                    width: 30
+                    height: 30
+                    radius: 6
+                    color: mediaMouse.containsMouse && modelData.enabled ? Colors.dim : "transparent"
+
+                    Icon {
+                        anchors.centerIn: parent
+                        font.pixelSize: 18
+                        color: parent.modelData.enabled ? Colors.acid : Colors.gray
+                        text: parent.modelData.glyph
+                    }
+                    MouseArea {
+                        id: mediaMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        enabled: parent.modelData.enabled
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: parent.modelData.act()
+                    }
+                }
+            }
+        }
+    }
+
     Divider {}
 
     // footer
@@ -265,6 +409,7 @@ BarPopup {
         height: lockBtn.implicitHeight
 
         Row {
+            id: batteryRow
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
@@ -284,6 +429,14 @@ BarPopup {
                 text: Math.round(parent.dev.percentage * 100) + "%"
                     + (parent.charging ? " · charging" : parent.dev.state === UPowerDeviceState.FullyCharged ? " · full" : "")
             }
+        }
+
+        MouseArea {
+            anchors.fill: batteryRow
+            anchors.margins: -4
+            visible: batteryRow.visible
+            cursorShape: Qt.PointingHandCursor
+            onClicked: menu.openPopup("battery")
         }
 
         Row {

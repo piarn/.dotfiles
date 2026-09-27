@@ -1,5 +1,6 @@
-// Notification list, opened by clicking the bell widget in Bar.qml. Every
-// notification lands here (toasts are just the on-screen subset, see
+// Notification list, opened from [all] in quick settings (which shows the
+// newest few) or the › on its Silence tile; the ≡ in the bar gets a dot
+// while it's non-empty. Every notification lands here (toasts are just the on-screen subset, see
 // NotificationToasts.qml) until dismissed; do-not-disturb lives here and in
 // the quick settings panel.
 import QtQuick

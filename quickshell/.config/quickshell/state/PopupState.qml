@@ -13,6 +13,9 @@ QtObject {
 
     property string current: ""
     property var screen: null
+    // Popup that opened `current` (quick settings, for its tiles' ›), which
+    // BarPopup offers a ‹ back to. "" when opened from the bar or IPC.
+    property string backTo: ""
 
     // The ShellScreen sway currently has focused — for things opened from
     // the keyboard (IPC) or on their own (toasts, OSD), where there's no
@@ -31,9 +34,10 @@ QtObject {
 
     // `scr` is the bar's screen when clicked, omitted from IPC. Clicking the
     // same widget on another monitor moves the popup there instead of
-    // closing it.
-    function toggle(name, scr) {
+    // closing it. `from` is the popup it's opened from, see backTo.
+    function toggle(name, scr, from) {
         const target = scr || focusedScreen
+        backTo = from || ""
         if (current === name && screen === target) {
             current = ""
             return
@@ -47,5 +51,10 @@ QtObject {
 
     function close() {
         current = ""
+        backTo = ""
+    }
+
+    function back() {
+        if (backTo) toggle(backTo, screen)
     }
 }

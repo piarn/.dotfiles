@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Opt-in extras: features that aren't part of the base dotfiles and only
+# get installed and linked in on machines that ask for them.
+#
+#   extras.sh list              available extras, * = enabled here
+#   extras.sh enable <name>     run <name>/setup.sh, stow it, restart quickshell
+#   extras.sh disable <name>    unstow it (leaves installed packages alone)
+#   extras.sh restow            re-link every enabled extra (install.sh does this)
+#
+# Each extra is a directory here holding a setup.sh (installs
+# dependencies; idempotent) and/or a stow package `home/` mirroring $HOME.
+# Which extras are enabled is per machine, kept in the untracked
+# ~/.dots/.extras-enabled.
+set -euo pipefail
+
+EXTRAS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENABLED_FILE="$EXTRAS_DIR/../.extras-enabled"
+
+available() {
+    local d
+    for d in "$EXTRAS_DIR"/*/; do
+        { [ -d "$d/home" ] || [ -f "$d/setup.sh" ]; } && basename "$d"
+    done
+}
+
+enabled() {
+    [ -f "$ENABLED_FILE" ] && grep -v '^\s*$' "$ENABLED_FILE" || true
+}
+
+is_enabled() {
+    enabled | grep -x "$1" >/dev/null
+}
+
+require_extra() {
+    if [ -z "${1:-}" ] || ! available | grep -x "$1" >/dev/null; then
+        echo "error: unknown extra '${1:-}'; available: $(available | tr '\n' ' ')" >&2
+        exit 1
+    fi
+}
+
+stow_extra() {
+    [ -d "$EXTRAS_DIR/$1/home" ] || return 0
+    stow -d "$EXTRAS_DIR/$1" -t "$HOME" --no-folding "$2" home
+}
+
+# --no-folding means stow -D leaves the extra's (now empty) directories
+# behind, e.g. ~/.config/quickshell/extras/<name>.
+prune_dirs() {
+    [ -d "$EXTRAS_DIR/$1/home" ] || return 0
+    (cd "$EXTRAS_DIR/$1/home" && find . -mindepth 1 -type d | sort -r) | while IFS= read -r d; do
+        rmdir "$HOME/$d" 2>/dev/null || true
+    done
+}
+
+# Same as sway's $mod+Shift+c: quickshell only scans for extras at
+# startup, and the watchdog/exec_always bring it straight back.
+restart_quickshell() {
+    [ -d "$EXTRAS_DIR/$1/home" ] || return 0
+    if pgrep -x quickshell >/dev/null && swaymsg -t get_version >/dev/null 2>&1; then
+        echo "==> restarting quickshell"
+        pkill -KILL -x quickshell || true
+        swaymsg -q reload
+    fi
+}
+
+case "${1:-list}" in
+    list)
+        for name in $(available); do
+            if is_enabled "$name"; then echo "* $name"; else echo "  $name"; fi
+        done
+        ;;
+    enable)
+        require_extra "${2:-}"
+        name="$2"
+        if [ -x "$EXTRAS_DIR/$name/setup.sh" ]; then
+            echo "==> setting up $name"
+            "$EXTRAS_DIR/$name/setup.sh"
+        fi
+        echo "==> stowing $name"
+        stow_extra "$name" -R
+        is_enabled "$name" || echo "$name" >>"$ENABLED_FILE"
+        restart_quickshell "$name"
+        ;;
+    disable)
+        require_extra "${2:-}"
+        name="$2"
+        echo "==> unstowing $name"
+        stow_extra "$name" -D
+        prune_dirs "$name"
+        if [ -f "$ENABLED_FILE" ]; then
+            grep -vx "$name" "$ENABLED_FILE" >"$ENABLED_FILE.tmp" || true
+            mv "$ENABLED_FILE.tmp" "$ENABLED_FILE"
+        fi
+        restart_quickshell "$name"
+        ;;
+    restow)
+        for name in $(enabled); do
+            [ -d "$EXTRAS_DIR/$name" ] || continue
+            echo "==> stowing extra $name"
+            stow_extra "$name" -R
+        done
+        ;;
+    *)
+        sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+        exit 1
+        ;;
+esac

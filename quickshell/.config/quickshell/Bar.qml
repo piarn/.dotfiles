@@ -1,7 +1,7 @@
 // Status bar, replacing waybar. One PanelWindow per screen (Variants), with
-// sway workspaces on the left, a clock centered, and status widgets on the
-// right ending in the ≡ tray/quick-settings button. Each widget opens its
-// popup on this bar's own screen. Colors from the rice theme via the Colors
+// sway workspaces on the left, a clock centered, and a single ≡ quick
+// settings button on the right (plus a recording indicator while
+// screenrec runs). Popups open on this bar's own screen. Colors from the rice theme via the Colors
 // singleton.
 import Quickshell
 import Quickshell.I3
@@ -174,60 +174,33 @@ Variants {
                     }
                 }
 
-                // Icon follows the *primary* device (lowest-metric default
-                // route), i.e. where traffic actually goes; every interface is
-                // listed in NetworkMenu. VPN glyph appended while one is up.
-                BarWidget {
-                    screen: bar.modelData
-                    popup: "network"
-                    icon: NetworkState.icon(NetworkState.primary) + (NetworkState.vpnActive ? " \u{f0582}" : "")
-                    iconColor: {
-                        if (NetworkState.kind === "wifi") {
-                            if (NetworkState.signal < 25) return Colors.red
-                            if (NetworkState.signal < 50) return Colors.amber
-                            return Colors.acid
-                        }
-                        return NetworkState.kind === "eth" ? Colors.acid : Colors.red
-                    }
-                }
-
-                // Dot: something connected. Hidden when off, since the icon
-                // already turns red for that.
-                BarWidget {
-                    screen: bar.modelData
-                    popup: "bluetooth"
-                    icon: BluetoothState.powered ? "\u{f00af}" : "\u{f00b2}"
-                    iconColor: BluetoothState.powered ? Colors.acid : Colors.red
-                    showDot: BluetoothState.powered
-                    dotFilled: BluetoothState.connectedDevices.length > 0
-                }
-
+                // The only widget: quick settings, which holds everything else
+                // (network, bluetooth, notifications, battery, tray; each tile's
+                // › opens that feature's full popup). The icon only carries what
+                // needs attention: red when offline, on very weak wi-fi or a
+                // nearly empty battery; amber when merely weak/low or a tray app
+                // wants attention; a dot while there are unread notifications.
                 BarWidget {
                     readonly property real pct: UPower.displayDevice.percentage * 100
-                    readonly property bool charging: UPower.displayDevice.state === UPowerDeviceState.Charging
-                    visible: UPower.displayDevice.isLaptopBattery
-                    screen: bar.modelData
-                    popup: "battery"
-                    icon: BatteryState.icon(pct, charging)
-                    iconColor: pct <= 15 && !charging ? Colors.red : pct <= 30 ? Colors.amber : Colors.acid
-                }
-
-                // Bell color carries do-not-disturb, the dot "anything to read".
-                BarWidget {
-                    screen: bar.modelData
-                    popup: "notifications"
-                    icon: NotificationState.dnd ? "\u{f009b}" : "\u{f009a}"
-                    iconColor: NotificationState.dnd ? Colors.red : Colors.acid
-                    showDot: true
-                    dotFilled: NotificationState.notifications.length > 0
-                }
-
-                // Tray + quick settings. Amber while a tray app wants attention.
-                BarWidget {
+                    readonly property bool onBattery: UPower.displayDevice.isLaptopBattery
+                        && UPower.displayDevice.state !== UPowerDeviceState.Charging
+                        && UPower.displayDevice.state !== UPowerDeviceState.FullyCharged
+                    readonly property bool weakWifi: NetworkState.kind === "wifi" && NetworkState.signal < 50
                     screen: bar.modelData
                     popup: "quicksettings"
                     icon: "\u{f035c}"
-                    iconColor: SystemTray.items.values.some(i => i.status === Status.NeedsAttention) ? Colors.amber : Colors.acid
+                    iconColor: {
+                        if (NetworkState.kind === "none"
+                                || (weakWifi && NetworkState.signal < 25)
+                                || (onBattery && pct <= 15))
+                            return Colors.red
+                        if (weakWifi || (onBattery && pct <= 30)
+                                || SystemTray.items.values.some(i => i.status === Status.NeedsAttention))
+                            return Colors.amber
+                        return Colors.acid
+                    }
+                    showDot: NotificationState.notifications.length > 0
+                    dotFilled: true
                 }
             }
         }

@@ -17,11 +17,15 @@ import "./popups"
 import "./state"
 
 ShellRoot {
+    // No hot reload on file changes: reloading mid-edit has crashed
+    // quickshell (EGL surface errors), which while locked leaves sway's red
+    // lock-failure screen. Apply changes with $mod+Shift+c instead.
+    settings.watchFiles: false
+
     Bar {}
     Launcher {}
     ClipboardMenu {}
     NetworkMenu {}
-    BluetoothMenu {}
     BatteryMenu {}
     NotificationCenter {}
     QuickSettings {}
@@ -30,12 +34,23 @@ ShellRoot {
     PowerMenu {}
     LockScreen {}
 
-    // `qs ipc call popup toggle <name>` — network, bluetooth,
-    // battery, notifications, quicksettings. Opens on the focused monitor.
+    // `qs ipc call popup toggle <name>` — quicksettings ($mod+n), network,
+    // battery, notifications. Opens on the focused monitor. "bluetooth"
+    // still works: it's a section of the network popup now.
     IpcHandler {
         target: "popup"
-        function toggle(name: string): void { PopupState.toggle(name) }
+        function toggle(name: string): void { PopupState.toggle(name === "bluetooth" ? "network" : name) }
         function close(): void { PopupState.close() }
+    }
+
+    // `qs ipc call vpn toggle mullvad` — connect/disconnect a VPN provider
+    // extra by name (see state/ExtrasState.qml), e.g. from a sway bind.
+    IpcHandler {
+        target: "vpn"
+        function toggle(name: string): void {
+            const v = ExtrasState.vpn(name)
+            if (v && v.available) v.toggle()
+        }
     }
 
     // `qs ipc call idle toggle` — the quick settings "keep awake" tile.

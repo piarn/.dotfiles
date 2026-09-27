@@ -35,7 +35,6 @@ Item {
 
     readonly property var primary: devices.find(d => d.primary) || devices.find(d => d.connected) || null
     readonly property var wifiDevice: devices.find(d => d.type === "wifi") || null
-    readonly property bool vpnActive: vpns.some(v => v.active)
 
     // Kept for Bar.qml's color logic — all derived from `primary`.
     readonly property string kind: !primary ? "none" : primary.type === "wifi" ? "wifi" : "eth"
@@ -107,6 +106,12 @@ Item {
     function toggleDevice(dev) {
         if (dev.connected) run("disconnecting " + dev.device, ["nmcli", "device", "disconnect", dev.device])
         else run("connecting " + dev.device, ["nmcli", "device", "connect", dev.device])
+    }
+
+    // Re-reads profiles edited outside NetworkManager (files dropped into
+    // /etc/NetworkManager/system-connections, nmcli from elsewhere, ...).
+    function reloadConnections() {
+        run("reloading connections", ["nmcli", "connection", "reload"])
     }
 
     function setWifiEnabled(on) {

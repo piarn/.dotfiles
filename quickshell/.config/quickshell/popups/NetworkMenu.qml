@@ -1,9 +1,13 @@
-// Network popup, opened by clicking the network widget in Bar.qml. Three
-// sections:
+// Network popup, opened from the quick settings network and bluetooth
+// tiles. [reload] re-reads NetworkManager's profiles from disk and
+// refreshes everything below. Sections:
 //  - interfaces: every managed ethernet/wifi/wwan device, with the one
 //    holding the default route marked primary, [make primary] on the rest,
 //    and connect/disconnect per device
-//  - vpn: NetworkManager vpn/wireguard profiles (hidden when there are none)
+//  - vpn: NetworkManager vpn/wireguard profiles, plus any VPN provider
+//    extras (Mullvad, Tailscale, ...; see components/VpnProvider.qml) whose
+//    client is installed. Hidden when there are none
+//  - bluetooth: power, [scan] and devices (components/BluetoothSection.qml)
 //  - wi-fi: nearby networks, click to connect; asks for a password up front
 //    for secured networks with no saved profile instead of failing first
 // Enterprise (802.1X) networks take a username + password (PEAP/MSCHAPv2),
@@ -28,8 +32,18 @@ BarPopup {
     readonly property bool credsHidden: credsOpen && !!pwNet.hidden
     readonly property bool credsEnterprise: credsOpen && /802\.1X/.test(pwNet.security || "")
     // exclusive keyboard while typing credentials or searching, see CardWindow
-    needsKeyboard: credsOpen || searching
+    needsKeyboard: credsOpen || searching || ExtrasState.vpns.some(v => v.wantsKeyboard)
     property bool searching: false
+
+    // Provider whose detail panel is expanded in the vpn section.
+    property string openVpn: ""
+    readonly property var vpnProviders: ExtrasState.vpns.filter(v => v.available)
+    // A provider's own tunnel can surface as an NM connection (e.g.
+    // wg0-mullvad) — it's already listed as the provider.
+    readonly property var nmVpns: {
+        const hidden = [].concat(...ExtrasState.vpns.map(v => Array.from(v.interfaces)))
+        return NetworkState.vpns.filter(v => !hidden.some(h => v.name.startsWith(h)))
+    }
 
     readonly property var shownNetworks: {
         if (!NetworkState.wifiEnabled) return []
@@ -114,6 +128,12 @@ BarPopup {
         Qt.callLater(() => first.input.forceActiveFocus())
     }
 
+    function reloadAll() {
+        NetworkState.reloadConnections()
+        NetworkState.scan()
+        for (const v of ExtrasState.vpns) { v.actionStatus = ""; v.refresh() }
+    }
+
     onOpened: {
         pwNet = null
         searching = false
@@ -121,6 +141,7 @@ BarPopup {
         NetworkState.actionStatus = ""
         NetworkState.refresh()
         NetworkState.scan()
+        for (const v of ExtrasState.vpns) { v.actionStatus = ""; v.refresh() }
     }
 
     // A failed connect to a secured network most often means a wrong or
@@ -159,6 +180,11 @@ BarPopup {
                 baseColor: NetworkState.wifiEnabled ? Colors.acid : Colors.red
                 enabled: !NetworkState.busy
                 onClicked: NetworkState.setWifiEnabled(!NetworkState.wifiEnabled)
+            }
+            TextButton {
+                label: "reload"
+                enabled: !NetworkState.busy
+                onClicked: menu.reloadAll()
             }
             TextButton {
                 id: settingsBtn
@@ -290,7 +316,7 @@ BarPopup {
         id: vpnCol
         width: parent.width
         spacing: 4
-        visible: NetworkState.vpns.length > 0
+        visible: menu.nmVpns.length > 0 || menu.vpnProviders.length > 0
 
         MonoText {
             color: Colors.gray
@@ -298,7 +324,7 @@ BarPopup {
         }
 
         Repeater {
-            model: NetworkState.vpns
+            model: menu.nmVpns
 
             delegate: Item {
                 id: vpnRow
@@ -338,6 +364,138 @@ BarPopup {
                 }
             }
         }
+
+        // VPN provider extras (components/VpnProvider): name + status on
+        // top, their one-line detail below, › expands their own panel.
+        Repeater {
+            model: menu.vpnProviders
+
+            delegate: Column {
+                id: provRow
+                required property var modelData
+                readonly property var vpn: modelData
+                readonly property bool expanded: menu.openVpn === vpn.name
+                width: menu.innerWidth
+                spacing: 4
+
+                Rectangle {
+                    width: parent.width
+                    height: provCol.implicitHeight + 10
+                    radius: 4
+                    color: provRow.vpn.active ? Colors.surface : "transparent"
+
+                    Icon {
+                        id: provIcon
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 18
+                        color: provRow.vpn.busy || provRow.vpn.warning ? Colors.amber
+                            : provRow.vpn.active ? Colors.neon : Colors.gray
+                        text: "\u{f0582}"
+                    }
+
+                    Column {
+                        id: provCol
+                        anchors.left: provIcon.right
+                        anchors.right: provActions.left
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+
+                        Row {
+                            spacing: 6
+                            MonoText {
+                                id: provName
+                                font.pixelSize: 13
+                                color: provRow.vpn.active ? Colors.fg : Colors.gray2
+                                text: provRow.vpn.name
+                            }
+                            MonoText {
+                                anchors.baseline: provName.baseline
+                                font.pixelSize: 11
+                                color: provRow.vpn.busy || provRow.vpn.warning ? Colors.amber
+                                    : provRow.vpn.active ? Colors.neon : Colors.gray
+                                text: provRow.vpn.status
+                            }
+                        }
+                        MonoText {
+                            width: parent.width
+                            visible: text !== ""
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                            color: Colors.gray2
+                            text: provRow.vpn.detail
+                        }
+                        MonoText {
+                            width: parent.width
+                            visible: text !== ""
+                            font.pixelSize: 11
+                            wrapMode: Text.Wrap
+                            color: provRow.vpn.actionStatus.startsWith("failed") ? Colors.red : Colors.gray2
+                            text: provRow.vpn.actionStatus
+                        }
+                    }
+
+                    Row {
+                        id: provActions
+                        anchors.right: parent.right
+                        anchors.rightMargin: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 6
+
+                        TextButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: provRow.vpn.canToggle
+                            label: provRow.vpn.active || provRow.vpn.busy ? "disconnect" : "connect"
+                            baseColor: provRow.vpn.active ? Colors.gray2 : Colors.acid
+                            enabled: !provRow.vpn.running
+                            onClicked: provRow.vpn.toggle()
+                        }
+
+                        Rectangle {
+                            visible: provRow.vpn.detailComponent.toString() !== ""
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 22
+                            height: 22
+                            radius: 4
+                            color: chevMouse.containsMouse ? Colors.deep : "transparent"
+
+                            Icon {
+                                anchors.centerIn: parent
+                                color: Colors.gray2
+                                text: provRow.expanded ? "\u{f0140}" : "\u{f0142}"
+                            }
+                            MouseArea {
+                                id: chevMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: menu.openVpn = provRow.expanded ? "" : provRow.vpn.name
+                            }
+                        }
+                    }
+                }
+
+                Loader {
+                    active: provRow.expanded
+                    visible: active
+                    width: parent.width
+                    // loads on first expand, keeping `provider` for it
+                    Component.onCompleted: setSource(provRow.vpn.detailComponent, { provider: provRow.vpn })
+                }
+            }
+        }
+    }
+
+    // bluetooth
+    Rectangle { width: parent.width; height: 1; color: Colors.dim; visible: btSection.visible }
+
+    BluetoothSection {
+        id: btSection
+        width: parent.width
+        visible: BluetoothState.available
     }
 
     // wi-fi

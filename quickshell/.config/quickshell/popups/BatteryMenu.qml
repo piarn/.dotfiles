@@ -1,4 +1,4 @@
-// Battery popup, opened by clicking the battery widget in Bar.qml: icon,
+// Battery popup, opened from the battery line in quick settings: icon,
 // percentage and state, plus time to empty/full and the current power draw
 // when UPower knows them.
 import Quickshell.Services.UPower

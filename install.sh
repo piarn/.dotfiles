@@ -347,6 +347,10 @@ for pkg in "${PACKAGES[@]}"; do
     stow -v --no-folding --adopt -t "$HOME" "$pkg"
 done
 
+# Opt-in extras (extras/extras.sh) stay out of PACKAGES; this only re-links
+# the ones already enabled on this machine, so new files in them land too.
+"$DOTS_DIR/extras/extras.sh" restow
+
 install_fish_plugins
 install_kde_flatpak_theme
 install_tpm

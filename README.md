@@ -104,6 +104,47 @@ New files in a package need `stow -R --no-folding -t ~ <pkg>` before
 they're linked in — quickshell reports a new QML file as "X is not a
 type" until then.
 
+## Extras
+
+Opt-in features that aren't part of the base setup live under
+[`extras/`](extras): `install.sh` never installs or links them on its own.
+Enable them per machine:
+
+```
+~/.dots/extras/extras.sh list             # * marks the enabled ones
+~/.dots/extras/extras.sh enable mullvad   # install it, link it in, restart quickshell
+~/.dots/extras/extras.sh disable mullvad  # unlink it (installed packages stay)
+```
+
+The enabled list is kept in the untracked `.extras-enabled`, and
+`install.sh` re-links whatever is on it. Each extra is a directory with a
+`setup.sh` (installs its dependencies, idempotent) and/or a `home/` stow
+package.
+
+VPN clients are one extra each, open-source clients only. Enabling one
+installs the client and its daemon; the ones with quickshell code add
+themselves to the network popup's vpn section (status, connect/disconnect,
+and a › panel with the client's own settings), next to NetworkManager's
+VPN profiles — which is where the NM-plugin extras' profiles show up.
+
+| Extra | What it adds |
+| --- | --- |
+| `mullvad` | Mullvad VPN; panel: relay location by country/city, reconnect, lockdown mode, auto-connect, account expiry |
+| `netbird` | NetBird (daemon + CLI, no tray app); panel: peers, management errors, session expiry. `[connect]` opens SSO login when needed |
+| `tailscale` | Tailscale, with you as its operator (no sudo for up/down); panel: login link, exit node picker, peers |
+| `protonvpn` | Proton VPN's CLI (no GTK app); panel: sign in (on a kitty terminal), kill switch, connect by country / fastest |
+| `zerotier` | ZeroTier One (installer signature-checked); no connect toggle — panel: node id, networks with [leave], join by network id |
+| `openvpn` | NM OpenVPN plugin: `nmcli connection import type openvpn file x.ovpn` |
+| `wireguard` | wireguard-tools: `nmcli connection import type wireguard file wg0.conf` |
+| `openconnect` | NM openconnect plugin: AnyConnect, GlobalProtect, Fortinet, Pulse — profiles via [settings] |
+| `vpnc` | NM vpnc plugin: Cisco IPsec (.pcf import) via [settings] |
+| `ssh-vpn` | NM SSH plugin: a VPN over a plain SSH login, via [settings] |
+
+`qs ipc call vpn toggle <name>` connects/disconnects a VPN extra, e.g. for
+a sway bind. Adding another client: an extra whose `home/` puts a `Vpn.qml`
+(a `components/VpnProvider.qml`) under `~/.config/quickshell/extras/<name>/`;
+`state/ExtrasState.qml` loads it at startup.
+
 ## Adding a package
 
 ```
