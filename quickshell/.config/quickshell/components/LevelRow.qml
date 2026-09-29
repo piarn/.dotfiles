@@ -39,7 +39,7 @@ Item {
         color: root.expanded || chevronMouse.containsMouse ? Colors.neon : Colors.gray2
         text: "\u{f0140}"
         rotation: root.expanded ? 180 : 0
-        Behavior on rotation { NumberAnimation { duration: 120 } }
+        Behavior on rotation { NumberAnimation { duration: Style.fast } }
 
         MouseArea {
             id: chevronMouse
@@ -86,6 +86,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 36
         horizontalAlignment: Text.AlignRight
+        color: root.muted ? Colors.red : Colors.gray2
         text: Math.round(root.value * 100) + "%"
     }
 }

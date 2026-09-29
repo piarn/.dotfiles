@@ -67,10 +67,9 @@ CardWindow {
                 required property int index
                 width: 84
                 height: 72
-                radius: 6
-                color: index === powerMenu.selected ? Colors.dim : "transparent"
-                border.color: index === powerMenu.selected ? Colors.neon : "transparent"
-                border.width: 1
+                color: index === powerMenu.selected ? Colors.surface : "transparent"
+                border.color: index === powerMenu.selected ? Colors.neon : Colors.dim
+                border.width: Style.border
 
                 Column {
                     anchors.centerIn: parent

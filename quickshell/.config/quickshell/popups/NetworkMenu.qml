@@ -217,10 +217,9 @@ BarPopup {
                 readonly property bool usable: modelData.state !== "unavailable"
                 width: menu.innerWidth
                 height: devCol.implicitHeight + 10
-                radius: 4
-                color: modelData.primary ? Colors.dim : modelData.connected ? Colors.surface : "transparent"
-                border.width: modelData.primary ? 1 : 0
-                border.color: Colors.neon
+                color: modelData.connected ? Colors.surface : "transparent"
+
+                Marker { visible: devRow.modelData.primary }
 
                 Icon {
                     id: devIcon
@@ -381,7 +380,6 @@ BarPopup {
                 Rectangle {
                     width: parent.width
                     height: provCol.implicitHeight + 10
-                    radius: 4
                     color: provRow.vpn.active ? Colors.surface : "transparent"
 
                     Icon {
@@ -459,8 +457,7 @@ BarPopup {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 22
                             height: 22
-                            radius: 4
-                            color: chevMouse.containsMouse ? Colors.deep : "transparent"
+                            color: chevMouse.containsMouse ? Colors.dim : "transparent"
 
                             Icon {
                                 anchors.centerIn: parent
@@ -542,7 +539,6 @@ BarPopup {
             width: parent.width
             height: 24
             visible: NetworkState.wifiEnabled
-            radius: 3
             color: Colors.surface
             border.color: searchInput.activeFocus ? Colors.neon : Colors.dim
             border.width: 1
@@ -642,9 +638,9 @@ BarPopup {
                 required property var modelData
                 width: ListView.view.width
                 height: 28
-                radius: 4
-                color: netRow.modelData.active ? Colors.dim
-                    : netMouse.containsMouse ? Colors.surface : "transparent"
+                color: netMouse.containsMouse ? Colors.surface : "transparent"
+
+                Marker { visible: netRow.modelData.active }
 
                 MouseArea {
                     id: netMouse
@@ -717,7 +713,6 @@ BarPopup {
                 y: netList.visibleArea.yPosition * netList.height
                 width: 3
                 height: netList.visibleArea.heightRatio * netList.height
-                radius: 1.5
                 color: Colors.gray
             }
         }

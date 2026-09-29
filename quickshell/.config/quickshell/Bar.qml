@@ -1,6 +1,6 @@
 // Status bar, replacing waybar. One PanelWindow per screen (Variants), with
-// sway workspaces on the left, a clock centered, and a single ≡ quick
-// settings button on the right (plus a recording indicator while
+// sway workspaces on the left (styled like tmux's window list), a clock
+// centered, and a single ≡ quick settings button on the right (plus a recording indicator while
 // screenrec runs). Popups open on this bar's own screen. Colors from the rice theme via the Colors
 // singleton.
 import Quickshell
@@ -54,8 +54,10 @@ Variants {
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: 6
             color: Colors.black
-            radius: 6
-            width: left.implicitWidth + 12
+            radius: Style.radius
+            border.width: Style.border
+            border.color: Colors.dim
+            width: left.implicitWidth + 2 * Style.border
             height: bar.pillHeight
 
             Row {
@@ -69,8 +71,7 @@ Variants {
                     delegate: Rectangle {
                         required property var modelData
                         width: label.implicitWidth + 16
-                        height: bar.pillHeight
-                        radius: 6
+                        height: bar.pillHeight - 2 * Style.border
                         color: modelData.focused ? Colors.neon
                             : modelData.urgent ? Colors.red
                             : "transparent"
@@ -81,6 +82,7 @@ Variants {
                             text: modelData.name
                             font.family: "monospace"
                             font.pixelSize: 13
+                            font.bold: modelData.focused
                             color: modelData.focused || modelData.urgent ? Colors.black : Colors.gray
                         }
 
@@ -99,7 +101,9 @@ Variants {
         Rectangle {
             anchors.centerIn: parent
             color: Colors.black
-            radius: 6
+            radius: Style.radius
+            border.width: Style.border
+            border.color: Colors.dim
             width: clock.implicitWidth + 20
             height: bar.pillHeight
 
@@ -126,7 +130,9 @@ Variants {
             anchors.verticalCenter: parent.verticalCenter
             anchors.rightMargin: 6
             color: Colors.black
-            radius: 6
+            radius: Style.radius
+            border.width: Style.border
+            border.color: Colors.dim
             width: widgets.implicitWidth + 20
             height: bar.pillHeight
 

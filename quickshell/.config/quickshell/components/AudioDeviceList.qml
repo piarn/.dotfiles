@@ -32,13 +32,14 @@ Column {
             readonly property bool active: modelData === root.current
             width: root.width
             height: 28
-            radius: 4
-            color: active ? Colors.dim : mouse.containsMouse ? Colors.surface : "transparent"
+            color: mouse.containsMouse ? Colors.surface : "transparent"
+
+            Marker { visible: row.active }
 
             MonoText {
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.leftMargin: 6
+                anchors.leftMargin: 10
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
                 color: row.active ? Colors.neon : Colors.fg

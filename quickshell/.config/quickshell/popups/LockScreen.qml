@@ -119,7 +119,6 @@ Item {
                         color: Colors.black
                         border.color: root.showFailure ? Colors.red : (passwordInput.activeFocus ? Colors.neon : Colors.dim)
                         border.width: 1
-                        radius: 4
 
                         SequentialAnimation {
                             id: shake

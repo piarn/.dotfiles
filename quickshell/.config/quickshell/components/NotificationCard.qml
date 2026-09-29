@@ -24,9 +24,8 @@ Rectangle {
     }
 
     implicitHeight: col.implicitHeight + 16
-    radius: 6
     color: toast ? Colors.black : Colors.surface
-    border.width: toast ? 2 : 1
+    border.width: Style.border
     border.color: notification.urgency === NotificationUrgency.Critical ? Colors.red
         : toast ? Colors.neon : Colors.dim
 

@@ -31,7 +31,8 @@ CardWindow {
     screen: PopupState.screen
     WlrLayershell.namespace: "quickshell-popup"
     cardWidth: fixedWidth > 0 ? fixedWidth : body.implicitWidth + 24
-    cardHeight: body.implicitHeight + 24
+    cardHeight: body.implicitHeight + contentTop + 12
+    title: name === "quicksettings" ? "quick settings" : name
 
     onVisibleChanged: if (visible) opened()
     onDismissed: close()
@@ -39,7 +40,7 @@ CardWindow {
     Column {
         id: body
         x: 12
-        y: 12
+        y: root.contentTop
         width: root.fixedWidth > 0 ? root.fixedWidth - 24 : implicitWidth
         spacing: 10
 

@@ -1,6 +1,6 @@
-// Volume / mic / brightness OSD, in the shape of the classic macOS one: a
-// rounded square low in the middle of the focused screen, a big glyph, and
-// 16 segments underneath. Click-through (empty input mask) and never takes
+// Volume / mic / brightness OSD: a slim square-framed strip low in the
+// middle of the focused screen — glyph, 16 segments (the same bar as quick
+// settings' sliders), percentage. Click-through (empty input mask) and never takes
 // focus; fades out 1.5s after the last change. What it shows comes from
 // state/OsdState.qml.
 import Quickshell
@@ -13,7 +13,7 @@ import "../components"
 PanelWindow {
     id: root
 
-    readonly property int segments: 16
+    readonly property int segments: Style.segments
     readonly property int filled: OsdState.muted ? 0 : Math.round(Math.min(1, OsdState.value) * segments)
 
     visible: card.opacity > 0
@@ -25,8 +25,8 @@ PanelWindow {
     color: "transparent"
     anchors.bottom: true
     margins.bottom: screen ? Math.round(screen.height * 0.12) : 120
-    implicitWidth: 200
-    implicitHeight: 200
+    implicitWidth: 300
+    implicitHeight: 40
     mask: Region {}
 
     function glyph() {
@@ -41,39 +41,56 @@ PanelWindow {
     Rectangle {
         id: card
         anchors.fill: parent
-        radius: 22
-        color: Qt.rgba(Colors.black.r, Colors.black.g, Colors.black.b, 0.88)
-        border.width: 1
+        radius: Style.radius
+        color: Qt.rgba(Colors.black.r, Colors.black.g, Colors.black.b, 0.92)
+        border.width: Style.border
         border.color: Colors.dim
         opacity: OsdState.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: OsdState.shown ? 90 : 350; easing.type: Easing.OutQuad } }
+        Behavior on opacity { NumberAnimation { duration: OsdState.shown ? Style.fast : 300; easing.type: Easing.OutQuad } }
 
         Icon {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: 34
-            font.pixelSize: 92
-            color: OsdState.muted ? Colors.red : Colors.fg
+            id: glyph
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            width: 20
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: 18
+            color: OsdState.muted ? Colors.red : Colors.neon
             text: root.glyph()
         }
 
         Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 26
+            id: bar
+            anchors.left: glyph.right
+            anchors.right: pct.left
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
             spacing: 2
+            readonly property real cell: (width - spacing * (root.segments - 1)) / root.segments
 
             Repeater {
                 model: root.segments
 
                 delegate: Rectangle {
                     required property int index
-                    width: 9
-                    height: 7
-                    radius: 1
-                    color: index < root.filled ? Colors.neon : Colors.dim
+                    width: bar.cell
+                    height: 10
+                    color: index < root.filled ? (OsdState.muted ? Colors.red : Colors.neon) : Colors.dim
                 }
             }
+        }
+
+        MonoText {
+            id: pct
+            anchors.right: parent.right
+            anchors.rightMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            width: 36
+            horizontalAlignment: Text.AlignRight
+            color: OsdState.muted ? Colors.red : Colors.fg
+            text: OsdState.muted ? "mute" : Math.round(Math.min(1, OsdState.value) * 100) + "%"
         }
     }
 }

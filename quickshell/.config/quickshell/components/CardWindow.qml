@@ -31,6 +31,11 @@ PanelWindow {
     id: root
 
     property bool centered: false
+    // Label cut into the top rule; content starting at y >= contentTop
+    // clears it.
+    property string title: ""
+    readonly property int titleOffset: 7
+    readonly property int contentTop: title !== "" ? titleOffset + 12 : 12
     property real cardWidth: 300
     property real cardHeight: 200
     default property alias content: card.data
@@ -106,14 +111,41 @@ PanelWindow {
         onTriggered: if (root.visible && !card.Window.active && !hover.hovered) root.dismissed()
     }
 
-    Rectangle {
+    Item {
         id: card
         width: root.cardWidth
         height: root.cardHeight
-        color: Colors.black
-        border.color: Colors.neon
-        border.width: 2
-        radius: 6
+
+        // Square 1px frame. With a title the top rule drops to the title's
+        // midline and the title is cut into it, like a tmux pane label:
+        // ── quick settings ────. Keyboard surfaces get the accent frame, bar
+        // popups the quiet one.
+        Rectangle {
+            id: frame
+            anchors.fill: parent
+            anchors.topMargin: root.title !== "" ? root.titleOffset : 0
+            color: Colors.black
+            radius: Style.radius
+            border.width: Style.border
+            border.color: root.needsKeyboard ? Colors.neon : Colors.dim
+        }
+        Rectangle {
+            visible: root.title !== ""
+            x: 10
+            width: titleText.implicitWidth + 12
+            height: titleText.implicitHeight
+            color: Colors.black
+
+            Text {
+                id: titleText
+                anchors.centerIn: parent
+                font.family: "monospace"
+                font.pixelSize: 11
+                font.bold: true
+                color: Colors.neon
+                text: root.title
+            }
+        }
 
         Window.onActiveChanged: {
             if (Window.active) {

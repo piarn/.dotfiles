@@ -31,7 +31,8 @@ BarPopup {
 
     property string hoveredTitle: ""
     property string devicesShown: ""   // "" | "output" | "input"
-    readonly property int tileWidth: (innerWidth - 8) / 2
+    // Ruled grid: spacing -1 overlaps neighbouring tiles' rules into one.
+    readonly property int tileWidth: (innerWidth + 1) / 2
 
     onOpened: {
         devicesShown = ""
@@ -104,7 +105,7 @@ BarPopup {
 
     Flow {
         width: parent.width
-        spacing: 4
+        spacing: -1
         visible: trayRepeater.count > 0
 
         Repeater {
@@ -116,10 +117,10 @@ BarPopup {
                 required property var modelData
                 width: 34
                 height: 34
-                radius: 6
-                color: trayMouse.containsMouse ? Colors.dim : Colors.surface
-                border.width: modelData.status === Status.NeedsAttention ? 1 : 0
-                border.color: Colors.amber
+                radius: Style.radius
+                color: trayMouse.containsMouse ? Colors.surface : Colors.black
+                border.width: Style.border
+                border.color: modelData.status === Status.NeedsAttention ? Colors.amber : Colors.dim
 
                 IconImage {
                     anchors.centerIn: parent
@@ -206,7 +207,7 @@ BarPopup {
     // toggles
     Grid {
         columns: 2
-        spacing: 8
+        spacing: -1
 
         // What traffic actually goes over; highlighted while a VPN is up.
         // Wi-Fi on/off is in the network popup's header.
@@ -379,8 +380,8 @@ BarPopup {
                     required property var modelData
                     width: 30
                     height: 30
-                    radius: 6
-                    color: mediaMouse.containsMouse && modelData.enabled ? Colors.dim : "transparent"
+                    radius: Style.radius
+                    color: mediaMouse.containsMouse && modelData.enabled ? Colors.surface : "transparent"
 
                     Icon {
                         anchors.centerIn: parent

@@ -131,8 +131,9 @@ CardWindow {
                 required property int index
                 width: ListView.view.width
                 height: 28
-                radius: 4
-                color: index === menu.selected ? Colors.dim : rowMouse.containsMouse ? Colors.surface : "transparent"
+                color: index === menu.selected || rowMouse.containsMouse ? Colors.surface : "transparent"
+
+                Marker { visible: row.index === menu.selected }
 
                 MonoText {
                     anchors.left: parent.left

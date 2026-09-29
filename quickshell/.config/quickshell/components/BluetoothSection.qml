@@ -66,13 +66,14 @@ Column {
             readonly property string status: BluetoothState.stateText(modelData)
             width: ListView.view.width
             height: 34
-            radius: 4
-            color: modelData.connected ? Colors.dim : "transparent"
+            color: "transparent"
+
+            Marker { visible: row.modelData.connected }
 
             Icon {
                 id: devIcon
                 anchors.left: parent.left
-                anchors.leftMargin: 6
+                anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 color: row.modelData.connected ? Colors.neon : row.modelData.paired ? Colors.fg : Colors.gray
                 text: BluetoothState.icon(row.modelData)
@@ -139,7 +140,6 @@ Column {
             y: list.visibleArea.yPosition * list.height
             width: 3
             height: list.visibleArea.heightRatio * list.height
-            radius: 1.5
             color: Colors.dim
         }
     }

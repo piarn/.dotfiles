@@ -16,7 +16,7 @@ Rectangle {
 
     implicitWidth: 200
     implicitHeight: 24
-    radius: 3
+    radius: Style.radius
     color: Colors.surface
     border.color: field.activeFocus ? Colors.neon : Colors.dim
     border.width: 1

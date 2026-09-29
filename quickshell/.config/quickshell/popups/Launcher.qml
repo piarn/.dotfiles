@@ -469,12 +469,13 @@ for p in sorted(seen, key=seen.get, reverse=True)[:40]:
                 readonly property bool current: index === launcher.selected
                 width: ListView.view.width
                 height: launcher.rowHeight
-                radius: 4
-                color: current ? Colors.dim : rowMouse.containsMouse ? Colors.surface : "transparent"
+                color: current || rowMouse.containsMouse ? Colors.surface : "transparent"
+
+                Marker { visible: row.current }
 
                 Row {
                     anchors.fill: parent
-                    anchors.leftMargin: 6
+                    anchors.leftMargin: 10
                     anchors.rightMargin: 6
                     spacing: 10
 
