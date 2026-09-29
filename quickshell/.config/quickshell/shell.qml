@@ -1,12 +1,13 @@
 // Entry point: `quickshell` (or sway's `exec quickshell`) loads this as the
 // "default" config since it sits directly at ~/.config/quickshell/shell.qml.
-// Colors come from ~/.rice/quickshell/Colors.qml (see Bar.qml/Launcher.qml),
+// Colors come from ~/.rice/quickshell/Colors.qml (see Bar.qml/Hub.qml),
 // re-rendered by ~/.rice/bin/apply-theme — this file has no theme-specific
 // content itself.
 //
 // Layout: state/ holds the pragma-Singleton status backends, popups/ holds
-// the click-to-open menus plus the free-standing surfaces (Launcher,
-// ClipboardMenu, PowerMenu, LockScreen, toasts, OSD), components/ holds
+// the click-to-open menus plus the free-standing surfaces (Hub — launcher,
+// settings and rice in one — ClipboardMenu, LockScreen, toasts, OSD; the
+// hub's sections live in popups/hub/), components/ holds
 // shared UI pieces (BarPopup is the shell every bar popup is built on).
 // Bar.qml and this file stay at the root since every popup/state type ends
 // up wired through one or the other.
@@ -23,7 +24,7 @@ ShellRoot {
     settings.watchFiles: false
 
     Bar {}
-    Launcher {}
+    Hub {}
     ClipboardMenu {}
     NetworkMenu {}
     BatteryMenu {}
@@ -31,7 +32,6 @@ ShellRoot {
     QuickSettings {}
     NotificationToasts {}
     Osd {}
-    PowerMenu {}
     LockScreen {}
 
     // `qs ipc call popup toggle <name>` — quicksettings ($mod+n), network,

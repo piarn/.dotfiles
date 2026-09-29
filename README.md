@@ -54,15 +54,16 @@ session/window/pane tree popup, and direct Alt binds — see
 
 ## Desktop
 
-sway + [quickshell](quickshell/.config/quickshell) (bar, popups, launcher,
-lock screen, notifications). The rule: `$mod`+letter is the everyday
+sway + [quickshell](quickshell/.config/quickshell) (bar, popups, the dots
+hub, lock screen, notifications). The rule: `$mod`+letter is the everyday
 action, `$mod+Shift` is the bigger version (move, capture, system). Plain
 Alt is left to apps.
 
 | Keys | Action |
 | --- | --- |
 | `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |
-| `$mod+Space` (or `$mod+d`) | launcher (see below) |
+| `$mod+Space` (or `$mod+d`) | hub: run apps and everything else (see below) |
+| `$mod+s` | hub: system settings |
 | `$mod+q` | close window |
 | `$mod+v` | clipboard history (cliphist) |
 | `$mod+e` | file manager (Dolphin) |
@@ -80,27 +81,39 @@ Alt is left to apps.
 | `$mod+Shift+s` | region screenshot: frozen screen in satty, crop, Enter saves + copies |
 | `$mod+Shift+r` | start/stop screen recording to `~/Videos/Captures` (click a window, drag a region, or click a monitor's bar) |
 | `$mod+Escape` | lock |
-| `$mod+Shift+Escape` | power menu (incl. logout) |
+| `$mod+Shift+Escape` | hub: session (lock, suspend, logout, reboot, shutdown) |
 | `$mod+Shift+c` | reload sway and restart quickshell |
 
-The launcher searches apps by name, description and keywords ("pdf" finds
-Zathura), most-used first. A leading character switches mode:
+The hub is one window with sections down the left: **run** (apps),
+**style** (rice themes, previewed with wallpaper and palette) and **system**
+(Wi-Fi and networks, VPNs, Bluetooth and devices, volume/mic and audio
+devices, brightness, night light, screen layout, power profile, keep awake,
+session). The search box searches all of them at once, so `night` finds night
+light, `ember` the theme and `firefox` the app. Apps match by name,
+description and keywords ("pdf" finds Zathura), most-used first.
+
+Keys: ↑↓ or `^j`/`^k` move, Enter acts, ←→ nudge a volume/brightness row,
+Tab/Shift+Tab switch section, Backspace on an empty box goes back out of a
+list (e.g. wi-fi networks), and Esc closes. Logout, reboot and shutdown need
+Enter twice. The mouse works everywhere too.
+
+In run, a leading character switches mode:
 
 | Prefix | Mode |
 | --- | --- |
 | `=` | calculator (`=2^10*3`, `sqrt`, `pi`); Enter copies the result |
-| `:` | system actions: lock, reload, suspend, logout, reboot, shutdown, `:theme <name>`, `:layout <name>` |
 | `>` | shell command; Enter runs it in kitty, Shift+Enter in the background |
 | `/` | files under `~` via fd (empty: recently opened); Shift+Enter shows it in Dolphin |
 | `?` | web search (or open an address) |
 | `@` | switch to an open window |
 
 `qs ipc call launcher open '<text>'` opens it pre-typed, e.g. `'@'` to
-bind a key straight to the window switcher.
+bind a key straight to the window switcher; `qs ipc call hub toggle <section>`
+and `qs ipc call hub open <section> <group>` open a section or group.
 
-Everything else (Wi-Fi incl. enterprise/hidden networks, Bluetooth, audio
-devices, night light, keep awake, power profile, tray) lives in the bar's
-popups and the ≡ quick settings.
+The bar's ≡ quick settings is the mouse-first glance of the same things
+(plus the tray, notifications and media), and its popups hold the deep
+views (enterprise/hidden Wi-Fi, VPN details, battery).
 
 If quickshell hangs or crashes, `qs-watchdog` restarts it within ~15s
 (re-locking if the session was locked) and keeps a hung instance's log

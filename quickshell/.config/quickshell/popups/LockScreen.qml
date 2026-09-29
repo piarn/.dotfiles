@@ -8,11 +8,11 @@
 // install_pam_lock_config — see that file for why it's a separate service
 // rather than reusing swaylock's or login's).
 //
-// Triggered by `qs ipc call lock lock` — sway's $mod+Escape bind, and
-// PowerMenu's own "lock" action, both just shell out to that same IPC call
-// rather than referencing this file directly, same loose coupling as
-// Launcher/PowerMenu's own toggles. Deliberately no Escape-to-dismiss
-// keybinding anywhere in this file: unlike Launcher/PowerMenu, this is a
+// Triggered by `qs ipc call lock lock` — sway's $mod+Escape bind, and the
+// hub's session "lock" row, both just shell out to that same IPC call
+// rather than referencing this file directly, same loose coupling as the
+// hub's own toggles. Deliberately no Escape-to-dismiss
+// keybinding anywhere in this file: unlike the hub, this is a
 // security surface, so the only way out is a correct password.
 //
 import Quickshell
@@ -36,8 +36,7 @@ Item {
     // output's surface should unlock all of them at once) — referenced by
     // id from inside the per-screen `surface` Component below. Direct id
     // access across a Component boundary works here the same way it does in
-    // PowerMenu.qml's Repeater delegate (`powerMenu.selected`/`.run`):
-    // ids resolve against the whole document, not the instantiation point.
+    // any Repeater delegate: ids resolve against the whole document, not the instantiation point.
     property string currentText: ""
     property bool unlockInProgress: false
     property bool showFailure: false

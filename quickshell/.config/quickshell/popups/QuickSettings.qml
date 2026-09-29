@@ -457,7 +457,7 @@ BarPopup {
                 baseColor: Colors.red
                 onClicked: {
                     menu.close()
-                    Quickshell.execDetached(["qs", "ipc", "call", "powermenu", "toggle"])
+                    Quickshell.execDetached(["qs", "ipc", "call", "hub", "open", "system", "session"])
                 }
             }
         }

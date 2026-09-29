@@ -26,9 +26,9 @@ set $files flatpak run org.kde.dolphin
 set $browser flatpak run org.mozilla.firefox
 # quickshell's IPC client (the distro package)
 set $qs qs
-# Toggles the quickshell launcher panel (see ~/.dots/quickshell) via its
-# IPC target, rather than spawning a new process each time.
-set $menu exec $qs ipc call launcher toggle
+# The dots hub (~/.dots/quickshell/.config/quickshell/popups/Hub.qml):
+# launcher, settings and rice in one window, toggled over IPC per section.
+set $menu exec $qs ipc call hub toggle run
 
 ### Theme (~/.rice)
 include ~/.rice/sway/theme.conf
@@ -106,8 +106,9 @@ input "type:keyboard" {
 #
 # One rule throughout: $mod+<letter> is the everyday action, named by its
 # first letter where possible; $mod+Shift is the bigger version — move
-# things, capture the screen, or system actions (reload, power menu).
-# Nothing ends the session directly: logout sits behind the power menu.
+# things, capture the screen, or system actions (reload, session).
+# Nothing ends the session directly: logout sits behind the hub's session
+# rows, which ask for Enter twice.
 # Plain Alt is left alone for apps (Firefox, nvim, tmux).
 #
 # Basics:
@@ -120,9 +121,10 @@ input "type:keyboard" {
     # Close (quit) the focused window
     bindsym $mod+q kill
 
-    # Start your launcher ($mod+d kept as an alias)
+    # The hub: run (launcher; $mod+d kept as an alias) and system settings
     bindsym $mod+space exec $menu
     bindsym $mod+d exec $menu
+    bindsym $mod+s exec $qs ipc call hub toggle system
 
     # Clipboard history picker (quickshell, fed by cliphist)
     bindsym $mod+v exec $qs ipc call clipboard toggle
@@ -144,16 +146,16 @@ input "type:keyboard" {
     # manual way out when a frozen popup is holding the keyboard/pointer.
     bindsym $mod+Shift+c exec pkill -KILL -x quickshell; reload
 
-    # No dedicated exit-sway bind: logout lives in the power menu below.
+    # No dedicated exit-sway bind: logout lives in the hub's session group.
 
     # Lock the screen — quickshell's own session-lock surface (Toxic-themed,
     # blurred screenshot background), see
     # ~/.dots/quickshell/.config/quickshell/popups/LockScreen.qml
     bindsym $mod+Escape exec $qs ipc call lock lock
 
-    # Power menu (lock/suspend/reboot/shutdown/logout) — the deliberate next
-    # step up from the direct lock
-    bindsym $mod+Shift+Escape exec $qs ipc call powermenu toggle
+    # The hub's session group (lock/reload/suspend/logout/reboot/shutdown) —
+    # the deliberate next step up from the direct lock
+    bindsym $mod+Shift+Escape exec $qs ipc call hub open system session
 
     # Quick settings — the bar's only widget, and the way into network,
     # bluetooth, notifications and battery
