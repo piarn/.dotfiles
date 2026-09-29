@@ -70,12 +70,9 @@ NORMAL, direct:
 NORMAL, after the leader:
 
 - `i` INSERT, `v` VISUAL
-- `s` split horizontally, `V` split vertically, `z` zoom
-- `x` kill pane, `X` kill window (both confirm on the status line; stock `&`
-  still kills the window too)
-- `c` new window, `n`/`p` next/previous, `1`-`0` by index, `w` chooser, `,` rename
-- `d` detach, `r` reload config, `S` session manager (fzf popup: switch to a
-  running session or open/create one from a project dir)
+- `d` detach, `r` reload config
+  (window, pane and session management is on the direct Alt chords in
+  `tmux.conf`, not here)
 - arrows, `o` and `;` move between panes as they do in stock tmux
 - everything tmux binds by default that is not listed above (`%`, `[`, `?`, `t`,
   `f`, `o`, …) still works and also returns to NORMAL

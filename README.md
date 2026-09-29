@@ -46,6 +46,12 @@ whichever screen layout matches what's connected
 (`~/.rice/bin/apply-layout --auto`). Both are safe to re-run any time; see
 `~/.rice/README.md` for how theming and screen layouts actually work.
 
+## tmux
+
+Vim-style modes, one session per "case" with persistence across reboots, a
+session/window/pane tree popup, and direct Alt binds — see
+[`tmux/README.md`](tmux/README.md).
+
 ## Desktop
 
 sway + [quickshell](quickshell/.config/quickshell) (bar, popups, launcher,

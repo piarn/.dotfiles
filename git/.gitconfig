@@ -16,5 +16,6 @@
 [include]
 	path = ~/.gitconfig.identity.github
 
-[includeIf "gitdir:~/projects/provly"]
-	path = ~/.gitconfig.identity.provly
+[include]
+	path = ~/.gitconfig.identity.work
+
