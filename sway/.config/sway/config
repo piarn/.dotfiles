@@ -257,6 +257,8 @@ input "type:keyboard" {
 
     # Switch the current container between tabbed and tiled
     bindsym $mod+w layout toggle tabbed split
+    # Wrap the focused window in its own tabbed group (move others into it)
+    bindsym $mod+Shift+w split v; layout tabbed
 
     # Make the current focus fullscreen
     bindsym $mod+Shift+f fullscreen
