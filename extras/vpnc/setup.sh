@@ -7,4 +7,5 @@ set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/../lib.sh"
 
 pkg_install NetworkManager-vpnc NetworkManager-vpnc-gnome \
-    -- network-manager-vpnc network-manager-vpnc-gnome
+    -- network-manager-vpnc network-manager-vpnc-gnome \
+    -- networkmanager-vpnc

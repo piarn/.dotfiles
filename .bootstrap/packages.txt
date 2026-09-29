@@ -18,8 +18,9 @@ fd-find
 foot
 kitty
 sway
-# bar + launcher (~/.dots/quickshell); confirmed in Fedora's own repos
-# (dnf), not verified on apt-based distros
+# bar + command center (~/.dots/quickshell); packaged natively on Fedora
+# (dnf), Debian sid (apt — may lag on stable/testing), and Arch's official
+# extra repo (pacman); no AUR needed for this one
 quickshell
 grim
 wf-recorder

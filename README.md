@@ -13,12 +13,21 @@ cd ~/.dots
 ```
 
 `install.sh` installs whatever's missing from `.bootstrap/packages.txt`
-(apt/dnf) and `.bootstrap/flatpaks.txt` (Flathub apps, system-wide), then
-symlinks each package into `$HOME`. It runs with `--adopt`,
+(apt/dnf/pacman) and `.bootstrap/flatpaks.txt` (Flathub apps, system-wide),
+then symlinks each package into `$HOME`. It runs with `--adopt`,
 so any real file already sitting at a target path (e.g. an existing
 `~/.bashrc`) is moved into the repo first, then symlinked back — check
 `git diff` afterward and revert with `git checkout -- <file>` if the repo
 version should have won.
+
+Tested distro families: Fedora (dnf), Debian/Ubuntu (apt), Arch (pacman).
+On Arch, three of the VPN extras (`mullvad`, `netbird`, `protonvpn`) and
+`ssh-vpn`'s NetworkManager plugin only have a community AUR package, no
+official one — `extras/*/setup.sh` needs `yay` or `paru` already on PATH
+for those specifically and fails with instructions if neither is found;
+it never installs one for you. Everything else (the base desktop stack,
+`tailscale`, `zerotier`, `openconnect`/`openvpn`/`vpnc`/`wireguard`) has
+an official package on all three and needs nothing extra.
 
 `.bootstrap/` holds machine-setup helpers `install.sh` drives: system
 packages (`packages.txt`) and the one-time fish plugin-manager setup

@@ -8,4 +8,5 @@ set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/../lib.sh"
 
 pkg_install NetworkManager-openvpn NetworkManager-openvpn-gnome \
-    -- network-manager-openvpn network-manager-openvpn-gnome
+    -- network-manager-openvpn network-manager-openvpn-gnome \
+    -- networkmanager-openvpn

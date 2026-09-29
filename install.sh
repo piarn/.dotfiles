@@ -23,9 +23,17 @@ declare -A PACKAGE_BIN_OVERRIDES=(
 # packages.txt name — add an entry here when that happens.
 declare -A APT_NAME_OVERRIDES=()
 
+# Same idea for pacman — Arch mostly matches dnf's naming (it's the
+# outlier that needs translating, not the rule), so this only needs
+# entries for the packages that actually differ.
+declare -A ARCH_NAME_OVERRIDES=(
+    [fd-find]=fd              # Arch just calls it fd, no split like Fedora/Debian
+    [pulseaudio-utils]=libpulse   # pactl ships in libpulse, pulled in either by pipewire-pulse or pulseaudio
+)
+
 # Installs everything listed in .bootstrap/packages.txt (one binary/package
 # name per line, matching dnf naming — see the override maps above for the
-# handful that need translating) that isn't already on PATH.
+# handful that need translating on apt/pacman) that isn't already on PATH.
 install_packages() {
     local pkgs=() pkg missing=() probe
     while IFS= read -r pkg; do
@@ -52,8 +60,14 @@ install_packages() {
         sudo apt update && sudo apt install -y "${apt_pkgs[@]}"
     elif command -v dnf >/dev/null 2>&1; then
         sudo dnf install -y "${missing[@]}"
+    elif command -v pacman >/dev/null 2>&1; then
+        local pacman_pkgs=()
+        for pkg in "${missing[@]}"; do
+            pacman_pkgs+=("${ARCH_NAME_OVERRIDES[$pkg]:-$pkg}")
+        done
+        sudo pacman -S --needed --noconfirm "${pacman_pkgs[@]}"
     else
-        echo "error: no supported package manager (apt/dnf) detected; install manually: ${missing[*]}" >&2
+        echo "error: no supported package manager (apt/dnf/pacman) detected; install manually: ${missing[*]}" >&2
         exit 1
     fi
 }
@@ -99,8 +113,10 @@ install_node() {
         sudo apt update && sudo apt install -y nodejs npm
     elif command -v dnf >/dev/null 2>&1; then
         sudo dnf install -y nodejs npm
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -S --needed --noconfirm nodejs npm
     else
-        echo "warning: npm not found and no supported package manager (apt/dnf) detected;" >&2
+        echo "warning: npm not found and no supported package manager (apt/dnf/pacman) detected;" >&2
         echo "         npm-based LSP servers will fail to install until it's on PATH" >&2
     fi
 }

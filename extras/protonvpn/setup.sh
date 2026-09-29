@@ -2,8 +2,11 @@
 # Installs what the protonvpn extra needs, run by extras.sh before stowing:
 # Proton's open-source CLI (proton-vpn-cli, the `protonvpn` command the
 # network popup drives) from repo.protonvpn.com — just the CLI, not the
-# GTK app, which can't run alongside it anyway. A no-op once installed.
+# GTK app, which can't run alongside it anyway. On Arch it's a community
+# AUR package instead (Proton doesn't run an Arch repo the way it does
+# for apt/dnf). A no-op once installed.
 set -euo pipefail
+EXTRA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Proton's repo packages are versioned; bump if these ever 404.
 RPM_RELEASE=1.0.4-1
@@ -23,8 +26,11 @@ if ! command -v protonvpn >/dev/null 2>&1; then
             "https://repo.protonvpn.com/debian/dists/stable/main/binary-all/protonvpn-stable-release_${DEB_RELEASE}_all.deb"
         dpkg -s protonvpn-stable-release >/dev/null 2>&1 || sudo dpkg -i "$tmp/release.deb"
         sudo apt update && sudo apt install -y proton-vpn-cli
+    elif command -v pacman >/dev/null 2>&1; then
+        . "$EXTRA_DIR/../../.bootstrap/aur.sh"
+        aur_install proton-vpn-cli
     else
-        echo "error: no supported package manager (apt/dnf); see https://protonvpn.com/support/linux-cli" >&2
+        echo "error: no supported package manager (apt/dnf/pacman); see https://protonvpn.com/support/linux-cli" >&2
         exit 1
     fi
 fi

@@ -7,4 +7,4 @@
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/../lib.sh"
 
-pkg_install wireguard-tools -- wireguard-tools
+pkg_install wireguard-tools -- wireguard-tools -- wireguard-tools

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Installs what the netbird extra needs, run by extras.sh before stowing:
 # the NetBird client (daemon + the `netbird` CLI the network popup drives)
-# from NetBird's own package repository. A no-op once `netbird` is on PATH.
+# from NetBird's own package repository (Arch: a community AUR package,
+# NetBird doesn't run its own Arch repo). A no-op once `netbird` is on PATH.
 set -euo pipefail
+EXTRA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if ! command -v netbird >/dev/null 2>&1; then
     echo "==> installing netbird from pkgs.netbird.io"
@@ -23,8 +25,11 @@ EOF
         echo 'deb [signed-by=/usr/share/keyrings/netbird-archive-keyring.gpg] https://pkgs.netbird.io/debian stable main' \
             | sudo tee /etc/apt/sources.list.d/netbird.list >/dev/null
         sudo apt update && sudo apt install -y netbird
+    elif command -v pacman >/dev/null 2>&1; then
+        . "$EXTRA_DIR/../../.bootstrap/aur.sh"
+        aur_install netbird
     else
-        echo "error: no supported package manager (apt/dnf); see https://docs.netbird.io/how-to/installation" >&2
+        echo "error: no supported package manager (apt/dnf/pacman); see https://docs.netbird.io/how-to/installation" >&2
         exit 1
     fi
 fi
