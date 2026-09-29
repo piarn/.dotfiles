@@ -128,7 +128,7 @@ Column {
                     Icon {
                         anchors.centerIn: parent
                         color: Colors.gray2
-                        text: countryRow.expanded ? "\u{f0140}" : "\u{f0142}"
+                        text: countryRow.expanded ? "\u{e5ce}" : "\u{e5cf}"   // expand_less / expand_more
                     }
 
                     MouseArea {
@@ -198,7 +198,7 @@ Column {
 
         ToggleTile {
             width: (parent.width - parent.spacing) / 2
-            icon: "\u{f0ccc}"
+            icon: "\u{f686}"   // shield_lock
             title: "lockdown"
             subtitle: "block when off"
             active: root.provider.lockdown
@@ -206,7 +206,7 @@ Column {
         }
         ToggleTile {
             width: (parent.width - parent.spacing) / 2
-            icon: "\u{f18f2}"
+            icon: "\u{e089}"   // start
             title: "auto-connect"
             subtitle: "on startup"
             active: root.provider.autoConnect
