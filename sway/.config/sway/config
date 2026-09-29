@@ -1,12 +1,7 @@
-# Default config for sway
-#
-# Copy this to ~/.config/sway/config and edit it to your liking.
-#
-# Read `man 5 sway` for a complete reference.
+# sway — see `man 5 sway`. Colors, gaps and screen layout come from ~/.rice.
 
 ### Variables
 #
-# Logo key. Use Mod1 for Alt.
 set $mod Mod4
 # Home row direction keys, like vim
 set $left h
@@ -21,7 +16,7 @@ set $right l
 # see ~/.config/environment.d/cursor.conf for the env vars GTK/Xwayland
 # apps need too (must be set before sway starts, so it can't live here).
 seat seat0 xcursor_theme Adwaita 24
-# Your preferred terminal emulator — kitty is primary (live theme reload via
+# Terminals — kitty is primary (live theme reload via
 # reload_config_on_change), foot stays for quick/lightweight launches (see
 # $mod+Shift+Return below) since it's the lighter of the two.
 set $term kitty
@@ -29,15 +24,8 @@ set $term_fast foot
 # File manager and browser (both flatpaks)
 set $files flatpak run org.kde.dolphin
 set $browser flatpak run org.mozilla.firefox
-# Your preferred application launcher
-#
-# `qs` (quickshell) links against Qt's private ABI and must run against the
-# exact Qt build it was compiled with — Qt 6.8.0 via aqtinstall under ~/Qt,
-# not the system Qt package (see the exec_always below). Sway's own PATH has
-# no ~/.local/bin to reach a wrapper for this, so every `qs` invocation below
-# sets LD_LIBRARY_PATH itself. Bump the version if quickshell is rebuilt
-# against a newer Qt.
-set $qs env LD_LIBRARY_PATH=$HOME/Qt/6.8.0/gcc_64/lib qs
+# quickshell's IPC client (the distro package)
+set $qs qs
 # Toggles the quickshell launcher panel (see ~/.dots/quickshell) via its
 # IPC target, rather than spawning a new process each time.
 set $menu exec $qs ipc call launcher toggle
@@ -47,7 +35,6 @@ include ~/.rice/sway/theme.conf
 
 ### Output configuration
 #
-# Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
 output * bg ~/.rice/wallpaper.png fill
 #
 # Screen layout: ~/.rice/layouts/*.conf, switch manually with
@@ -87,12 +74,6 @@ exec sh -c 'command -v cliphist >/dev/null && exec wl-paste --watch cliphist sto
 # Automount + notifications for USB drives (eject: `udiskie-umount -a`).
 # Skipped until installed.
 exec sh -c 'command -v udiskie >/dev/null && exec udiskie --no-tray'
-#
-# Example configuration:
-#
-#   output HDMI-A-1 resolution 1920x1080 position 1920,0
-#
-# You can get the names of your outputs by running: swaymsg -t get_outputs
 
 ### Idle configuration
 #
@@ -114,23 +95,7 @@ exec swayidle -w \
          timeout 600 '$qs ipc call lock lock' \
          before-sleep '$qs ipc call lock lock'
 
-### Input configuration
-#
-# Example configuration:
-#
-#   input type:touchpad {
-#       dwt enabled
-#       tap enabled
-#       natural_scroll enabled
-#       middle_emulation enabled
-#   }
-#
-#   input type:keyboard {
-#       xkb_layout "eu"
-#   }
-#
-# You can also configure each device individually.
-# Read `man 5 sway-input` for more information about this section.
+### Input configuration (`man 5 sway-input`)
 
 input "type:keyboard" {
     xkb_layout "lt"
@@ -166,11 +131,7 @@ input "type:keyboard" {
     bindsym $mod+e exec $files
     bindsym $mod+b exec $browser
 
-    # Drag floating windows by holding down $mod and left mouse button.
-    # Resize them with right mouse button + $mod.
-    # Despite the name, also works for non-floating windows.
-    # Change normal to inverse to use left mouse button for resizing and right
-    # mouse button for dragging.
+    # $mod+left drag moves, $mod+right drag resizes (tiled windows too)
     floating_modifier $mod normal
 
     # Reload the configuration file. Also kills quickshell first: its
@@ -246,8 +207,6 @@ input "type:keyboard" {
     bindsym $mod+Shift+8 move container to workspace number 8
     bindsym $mod+Shift+9 move container to workspace number 9
     bindsym $mod+Shift+0 move container to workspace number 10
-    # Note: workspaces can have any name you want, not just numbers.
-    # We just use 1-10 as the default.
 #
 # Layout stuff:
 #
@@ -274,23 +233,13 @@ input "type:keyboard" {
 #
 # Scratchpad:
 #
-    # Sway has a "scratchpad", which is a bag of holding for windows.
-    # You can send windows there and get them back later.
-
-    # Move the currently focused window to the scratchpad
+    # Send the focused window there / show (cycle) or hide scratchpad windows
     bindsym $mod+Shift+minus move scratchpad
-
-    # Show the next scratchpad window or hide the focused scratchpad window.
-    # If there are multiple scratchpad windows, this command cycles through them.
     bindsym $mod+minus scratchpad show
 #
 # Resizing containers:
 #
 mode "resize" {
-    # left will shrink the containers width
-    # right will grow the containers width
-    # up will shrink the containers height
-    # down will grow the containers height
     bindsym $left resize shrink width 10px
     bindsym $down resize grow height 10px
     bindsym $up resize shrink height 10px
@@ -335,20 +284,12 @@ bindsym $mod+r mode "resize"
 #
 # Status Bar:
 #
-# swaybar can't center a module (clock) or lay out network/battery — using
-# quickshell instead (also provides the app launcher above), configured
-# (Toxic theme included) in ~/.dots/quickshell. QML2_IMPORT_PATH makes
-# `import quickshell` in its QML resolve to ~/.rice/quickshell's Colors
-# singleton — see the comment atop ~/.rice/templates/quickshell/Colors.qml.tmpl.
-# `-n` skips spawning a duplicate if one's already running, so `exec_always`
-# (needed to survive `$mod+Shift+c` reloads) doesn't pile up processes.
-# LD_LIBRARY_PATH is required because quickshell links against Qt's private
-# ABI (see quickshell's BUILD.md) and must run against the exact Qt build it
-# was compiled with — here Qt 6.8.0 via aqtinstall under ~/Qt, not the
-# system Qt package. Sway's own PATH has no ~/.local/bin, so it can't reach
-# a PATH-based wrapper for this; set the search path here instead. Bump the
-# version below whenever quickshell is rebuilt against a newer Qt.
-exec_always env QML2_IMPORT_PATH=$HOME/.rice LD_LIBRARY_PATH=$HOME/Qt/6.8.0/gcc_64/lib quickshell -n
+# quickshell (bar, popups, launcher, lock screen) from ~/.dots/quickshell.
+# QML2_IMPORT_PATH makes `import quickshell` in its QML resolve to
+# ~/.rice/quickshell's Colors singleton. `-n` skips spawning a duplicate if
+# one's already running, so `exec_always` (needed to survive `$mod+Shift+c`
+# reloads) doesn't pile up processes. qs-watchdog restarts it the same way.
+exec_always env QML2_IMPORT_PATH=$HOME/.rice quickshell -n
 # Kills and restarts quickshell if it hangs (a frozen popup would otherwise
 # hold all input); see the comment atop the script.
 exec_always ~/.local/bin/qs-watchdog
