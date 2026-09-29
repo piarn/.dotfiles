@@ -1,8 +1,9 @@
 #!/bin/sh
-# Bring up tmux session NAME, from quickshell's hub (projects, sessions, ssh
-# hosts). A running session is used as is, a frozen one (the sessionizer's
-# ❄) is thawed, anything else is created in DIR (default ~), running CMD in
-# its first window if given — e.g. nvim for a project, ssh for a host.
+# Bring up tmux session NAME, from quickshell's command center (projects,
+# sessions, ssh hosts). A running session is used as is, a frozen one (the
+# sessionizer's ❄) is thawed, anything else is created in DIR (default ~),
+# running CMD in its first window if given — e.g. nvim for a project, ssh
+# for a host.
 #
 # If a terminal is already showing tmux, that client switches over and its
 # window gets focus, same as picking the session in the sessionizer; with
