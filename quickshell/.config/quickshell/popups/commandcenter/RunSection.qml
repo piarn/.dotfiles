@@ -10,12 +10,16 @@
 //      :theme <name>, :layout <name>
 // A prefix forces its scope, but it's never required to reach something:
 // once the plain apps search has a query, it also folds in dev/tools/
-// session matches (extraMatches, merged by score in defaultResults) so
-// typing a project or action's name finds it without the prefix — the
-// prefix is an accelerator/disambiguator, not a requirement. Each of
-// those rows carries a `group` (session/project/ssh/capture/clipboard/
-// notifications/session), shown as a tag so it's clear why a non-app
-// result showed up.
+// session/window matches (extraMatches, merged by score in
+// defaultResults) so typing a project, action, or open window's name
+// finds it without the prefix — the prefix is an accelerator/
+// disambiguator, not a requirement. Each of those rows carries a `group`
+// (session/project/ssh/capture/clipboard/notifications/window), shown as
+// a tag so it's clear why a non-app result showed up. Files are the one
+// mode that doesn't fold in — that needs running fd, too expensive to
+// fire on every keystroke on the chance it's wanted. Nothing at all
+// matches -> defaultResults falls back to the same "search the web" row
+// `?` gives, instead of a dead end.
 // devRows/toolRows are handed in from outside (CommandCenter.qml's
 // DevSection/ToolsSection instances) rather than owned here, keeping this
 // section a pure data/ranking layer.
@@ -145,16 +149,19 @@ Item {
         }))
     }
 
-    // dev/tools/session rows, scored against q the same way apps are, for
-    // defaultResults() to fold into the plain apps search. Empty on an
-    // empty query — this only ever narrows an active search, it doesn't
-    // replace the app list.
+    // dev/tools/session/window rows, scored against q the same way apps
+    // are, for defaultResults() to fold into the plain apps search. Empty
+    // on an empty query — this only ever narrows an active search, it
+    // doesn't replace the app list. Files aren't included: finding them
+    // means running fd, too expensive to fire on every default-mode
+    // keystroke just in case — `/` stays required for those.
     function extraMatches(q) {
         if (q === "") return []
         const out = []
         const fields = it => [
             { text: it.title, weight: 1, loose: true },
             { text: it.aliases || it.subtitle || "", weight: 0.6 },
+            { text: it.appName || "", weight: 0.8, loose: true },
         ]
         const add = (rows) => {
             for (const it of rows) {
@@ -167,18 +174,22 @@ Item {
         add(devRows)
         add(toolActionRows())
         add(sessionActionRows())
+        add(windowActionRows())
         return out
     }
 
-    // Plain apps search, folding in dev/tools/session matches once a
-    // query narrows it (see extraMatches above).
+    // Plain apps search, folding in dev/tools/session/window matches once
+    // a query narrows it (see extraMatches above). Nothing at all matches
+    // -> offer the same "search the web" escape hatch `?` gives, rather
+    // than a dead end.
     function defaultResults(q) {
         const appRows = appResults(q)
         if (q === "") return appRows
-        return appRows.map(it => ({ s: it.s, it }))
+        const merged = appRows.map(it => ({ s: it.s, it }))
             .concat(extraMatches(q))
             .sort((a, b) => b.s - a.s)
             .map(x => x.it)
+        return merged.length ? merged : webResults(q)
     }
 
     function calcResults() {
@@ -231,12 +242,12 @@ Item {
         return out
     }
 
-    function windowResults() {
-        const items = windows.map(w => {
+    function windowActionRows() {
+        return windows.map(w => {
             const entry = DesktopEntries.heuristicLookup(w.app)
             const where = w.ws === "__i3_scratch" ? "scratchpad" : "workspace " + w.ws
             return {
-                kind: "action",
+                kind: "action", group: "window",
                 title: w.title || w.app,
                 subtitle: (entry ? entry.name : w.app) + " · " + where,
                 appName: entry ? entry.name : w.app,
@@ -245,7 +256,10 @@ Item {
                 run: () => Quickshell.execDetached(["swaymsg", "[con_id=" + w.id + "] focus"]),
             }
         })
-        return ranked(items, rest, it => [
+    }
+
+    function windowResults() {
+        return ranked(windowActionRows(), rest, it => [
             { text: it.title, weight: 1, loose: true },
             { text: it.appName, weight: 1, loose: true },
         ])
@@ -321,6 +335,12 @@ Item {
             { text: a.subtitle, weight: 0.6 },
         ])
     }
+
+    // Windows load as soon as the command center opens, not just on
+    // switching into `@` mode: the plain apps search folds window matches
+    // in too (extraMatches), so it needs them ready before you've typed
+    // anything mode-specific.
+    onActiveChanged: if (active) treeProc.running = true
 
     onModeChanged: {
         if (!active) return
