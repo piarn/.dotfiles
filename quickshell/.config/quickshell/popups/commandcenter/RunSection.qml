@@ -1,6 +1,6 @@
 // The command center's mode dispatcher. Plain text searches apps by name,
 // description and keywords ("pdf" finds Zathura), most-launched first; a
-// leading character switches mode:
+// leading character forces a mode:
 //   =  calculator, Enter copies     >  shell command
 //   /  files (empty: recently opened)
 //   ?  web search                   @  open windows
@@ -8,6 +8,14 @@
 //   !  tools: capture, clipboard, notifications (needs toolRows)
 //   :  system actions (lock/reload/suspend/logout/reboot/shutdown),
 //      :theme <name>, :layout <name>
+// A prefix forces its scope, but it's never required to reach something:
+// once the plain apps search has a query, it also folds in dev/tools/
+// session matches (extraMatches, merged by score in defaultResults) so
+// typing a project or action's name finds it without the prefix — the
+// prefix is an accelerator/disambiguator, not a requirement. Each of
+// those rows carries a `group` (session/project/ssh/capture/clipboard/
+// notifications/session), shown as a tag so it's clear why a non-app
+// result showed up.
 // devRows/toolRows are handed in from outside (CommandCenter.qml's
 // DevSection/ToolsSection instances) rather than owned here, keeping this
 // section a pure data/ranking layer.
@@ -58,7 +66,7 @@ Item {
         case "dev": return devResults()
         case "tools": return toolResults()
         case "session": return sessionResults()
-        default: return appResults(rest)
+        default: return defaultResults(rest)
         }
     }
 
@@ -135,6 +143,42 @@ Item {
             // execute() ignores Terminal=true, so those go through kitty
             run: () => e.runInTerminal ? Quickshell.execDetached([root.term].concat(e.command)) : e.execute(),
         }))
+    }
+
+    // dev/tools/session rows, scored against q the same way apps are, for
+    // defaultResults() to fold into the plain apps search. Empty on an
+    // empty query — this only ever narrows an active search, it doesn't
+    // replace the app list.
+    function extraMatches(q) {
+        if (q === "") return []
+        const out = []
+        const fields = it => [
+            { text: it.title, weight: 1, loose: true },
+            { text: it.aliases || it.subtitle || "", weight: 0.6 },
+        ]
+        const add = (rows) => {
+            for (const it of rows) {
+                if (it.kind === "header") continue
+                const s = Search.match(fields(it), q)
+                if (s < 0) continue
+                out.push({ s: s + 40 * Math.log2(1 + LauncherUsage.weight(it.key || "")), it })
+            }
+        }
+        add(devRows)
+        add(toolActionRows())
+        add(sessionActionRows())
+        return out
+    }
+
+    // Plain apps search, folding in dev/tools/session matches once a
+    // query narrows it (see extraMatches above).
+    function defaultResults(q) {
+        const appRows = appResults(q)
+        if (q === "") return appRows
+        return appRows.map(it => ({ s: it.s, it }))
+            .concat(extraMatches(q))
+            .sort((a, b) => b.s - a.s)
+            .map(x => x.it)
     }
 
     function calcResults() {
@@ -214,16 +258,23 @@ Item {
         ])
     }
 
+    // toolRows as-is except "page" (clipboard history) becomes a plain
+    // action that opens that popup directly — there's no stack navigation
+    // here to push a page onto, unlike the old hub.
+    function toolActionRows() {
+        return toolRows.filter(r => r.kind !== "header").map(it => it.kind === "page" ? Object.assign({}, it, {
+            kind: "action", run: () => root.openPopup(it.group === "clipboard" ? "clipboard" : "notifications"),
+        }) : it)
+    }
+
     // Deliberately plain ranked(), not rankedByUsage(): tools stay in
     // their authored order rather than reshuffling by how often you use
     // each one.
     function toolResults() {
-        return ranked(toolRows.filter(r => r.kind !== "header"), rest, it => [
+        return ranked(toolActionRows(), rest, it => [
             { text: it.title, weight: 1, loose: true },
             { text: it.aliases || "", weight: 0.6 },
-        ]).map(it => it.kind === "page" ? Object.assign({}, it, {
-            kind: "action", run: () => root.openPopup(it.group === "clipboard" ? "clipboard" : "notifications"),
-        }) : it)
+        ])
     }
 
     readonly property var sessionActions: [
@@ -241,6 +292,17 @@ Item {
           cmd: ["systemctl", "poweroff"], confirm: true },
     ]
 
+    // sessionActions as plain rows — lock/reload/suspend/logout/reboot/
+    // shutdown only, not the :theme/:layout sub-modes (those need a name
+    // typed after them, so they don't make sense as bare defaultResults()
+    // matches the way a one-shot action does).
+    function sessionActionRows() {
+        return sessionActions.map(a => ({
+            kind: "action", group: "session", title: a.title, subtitle: a.aliases, glyph: a.glyph, confirm: !!a.confirm,
+            run: () => Quickshell.execDetached(a.cmd),
+        }))
+    }
+
     function sessionResults() {
         const m = rest.match(/^(theme|layout)\s*(.*)$/i)
         if (m) {
@@ -254,13 +316,10 @@ Item {
                 .map(l => ({ kind: "choice", group: "layout", title: l, subtitle: l === RiceState.currentLayout ? "current layout" : "apply screen layout",
                              glyph: "\u{e9b0}", on: l === RiceState.currentLayout, run: () => RiceState.applyLayout(l) }))
         }
-        return ranked(sessionActions, rest, a => [
+        return ranked(sessionActionRows(), rest, a => [
             { text: a.title, weight: 1, loose: true },
-            { text: a.aliases, weight: 0.6 },
-        ]).map(a => ({
-            kind: "action", group: "session", title: a.title, subtitle: a.aliases, glyph: a.glyph, confirm: !!a.confirm,
-            run: () => Quickshell.execDetached(a.cmd),
-        }))
+            { text: a.subtitle, weight: 0.6 },
+        ])
     }
 
     onModeChanged: {
