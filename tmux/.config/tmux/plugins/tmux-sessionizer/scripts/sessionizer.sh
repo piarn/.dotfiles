@@ -154,6 +154,8 @@ thaw() {
 # subcommand args: TYPE SESSION TARGET (type is S/W/P, or FS/FW/FP if frozen)
 case "${1:-}" in
     --list) list; exit ;;
+    # rebuild a frozen session without opening the picker (quickshell's hub)
+    --thaw) if [ -f "$FROZEN/$2.txt" ] && ! tmux has-session -t "=$2" 2>/dev/null; then thaw "$2"; fi; exit ;;
     --freeze) case "$2" in S | W | P) freeze "$3" || true ;; esac; exit ;;
     --kill)
         case "$2" in

@@ -62,7 +62,7 @@ Alt is left to apps.
 | Keys | Action |
 | --- | --- |
 | `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |
-| `$mod+Space` (or `$mod+d`) | hub: run apps and everything else (see below) |
+| `$mod+Space` (or `$mod+d`) | hub: the command center (see below) |
 | `$mod+s` | hub: system settings |
 | `$mod+q` | close window |
 | `$mod+v` | clipboard history (cliphist) |
@@ -84,20 +84,29 @@ Alt is left to apps.
 | `$mod+Shift+Escape` | hub: session (lock, suspend, logout, reboot, shutdown) |
 | `$mod+Shift+c` | reload sway and restart quickshell |
 
-The hub is one window with sections down the left: **run** (apps),
-**style** (rice themes, previewed with wallpaper and palette) and **system**
-(Wi-Fi and networks, VPNs, Bluetooth and devices, volume/mic and audio
-devices, brightness, night light, screen layout, power profile, keep awake,
-session). The search box searches all of them at once, so `night` finds night
-light, `ember` the theme and `firefox` the app. Apps match by name,
-description and keywords ("pdf" finds Zathura), most-used first.
+The hub is the command center. It opens on a home screen with a live status
+line, quick toggles (wi-fi, bluetooth, silence, awake, night, power profile),
+what you use most, your tmux sessions and the focus timer. One search box
+reaches everything across its scopes:
 
-Keys: ↑↓ or `^j`/`^k` move, Enter acts, ←→ nudge a volume/brightness row,
-Tab/Shift+Tab switch section, Backspace on an empty box goes back out of a
-list (e.g. wi-fi networks), and Esc closes. Logout, reboot and shutdown need
-Enter twice. The mouse works everywhere too.
+| Scope | What |
+| --- | --- |
+| apps | applications, most-used first (plus the prefix modes below) |
+| dev | tmux sessions (running and frozen), git projects, ssh hosts from `~/.ssh/config`; Enter opens one as a tmux session (`tmux-open`) in the terminal already showing tmux, or a new kitty |
+| system | Wi-Fi and networks, VPNs, Bluetooth and devices, volume/mic and audio devices, brightness, night light, screen layout, power profile, keep awake, session |
+| style | rice themes, previewed with wallpaper and palette |
+| tools | region screenshot, screen recording, color picker (`color-pick`), focus timer (shown on the bar), clipboard history, notifications |
 
-In run, a leading character switches mode:
+Typing ranks all of them together, so `night` finds night light, `ember` the
+theme and `firefox` the app. A scope or group name followed by a space narrows
+to it: `vpn `, `theme to`, `ssh `, `dev app`.
+
+Keys: ↑↓ or `^j`/`^k` move, Enter acts, ←→ pick a quick toggle or nudge a
+volume/brightness row, Tab/Shift+Tab switch scope, Backspace on an empty box
+goes back out of a list (e.g. wi-fi networks), and Esc closes. Logout, reboot
+and shutdown need Enter twice. The mouse works everywhere too.
+
+A leading character switches to a mode:
 
 | Prefix | Mode |
 | --- | --- |
@@ -108,8 +117,8 @@ In run, a leading character switches mode:
 | `@` | switch to an open window |
 
 `qs ipc call launcher open '<text>'` opens it pre-typed, e.g. `'@'` to
-bind a key straight to the window switcher; `qs ipc call hub toggle <section>`
-and `qs ipc call hub open <section> <group>` open a section or group.
+bind a key straight to the window switcher; `qs ipc call hub toggle <scope>`
+and `qs ipc call hub open <scope> <group>` open a scope or group.
 
 The bar's ≡ quick settings is the mouse-first glance of the same things
 (plus the tray, notifications and media), and its popups hold the deep

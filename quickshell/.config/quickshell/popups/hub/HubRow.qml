@@ -7,6 +7,9 @@
 //   level   0..1 bar: set(v), adjust(d); Enter/run mutes
 //   page    Enter opens item.rows()       info    read-only
 //   theme   a rice theme with wallpaper + palette preview
+//   status  the home screen's live status line (text), never selected
+//   chips   a row of quick toggles (chips: [{title, on, run}]); ←→ pick
+//           one when the row is selected, Enter or a click flips it
 import Quickshell
 import Quickshell.Widgets
 import QtQuick
@@ -20,6 +23,7 @@ Rectangle {
     property bool current: false
     property bool armed: false        // confirm action waiting for its second Enter
     property string tag: ""           // section/group, shown on search results
+    property int chip: 0              // selected chip on a chips row
     signal clicked(bool alt)
 
     function v(x) { return typeof x === "function" ? x() : x }
@@ -30,19 +34,82 @@ Rectangle {
     readonly property string rightText: v(item.right) || ""
 
     width: ListView.view ? ListView.view.width : 0
-    height: kind === "header" ? 30 : kind === "theme" ? 76 : 40
-    color: kind !== "header" && (current || mouse.containsMouse) ? Colors.surface : "transparent"
+    readonly property bool plain: kind === "header" || kind === "status"
+    height: kind === "header" ? 30 : kind === "theme" ? 76 : kind === "status" ? 30 : kind === "chips" ? 44 : 40
+    color: !plain && kind !== "chips" && (current || mouse.containsMouse) ? Colors.surface : "transparent"
 
     MouseArea {
         id: mouse
         anchors.fill: parent
-        enabled: row.kind !== "header"
+        enabled: !row.plain && row.kind !== "chips"
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: (m) => row.clicked(m.modifiers & Qt.ShiftModifier)
     }
 
-    Marker { visible: row.current }
+    Marker { visible: row.current && row.kind !== "chips" }
+
+    MonoText {
+        visible: row.kind === "status"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: 12
+        anchors.rightMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        elide: Text.ElideRight
+        color: Colors.gray2
+        text: row.kind === "status" ? row.v(row.item.text) : ""
+    }
+
+    // quick toggles: flat ruled cells like quick settings' tiles
+    Row {
+        visible: row.kind === "chips"
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: -1
+
+        Repeater {
+            model: row.kind === "chips" ? row.item.chips : []
+
+            delegate: Rectangle {
+                id: chipCell
+                required property var modelData
+                required property int index
+                readonly property bool on: !!row.v(modelData.on)
+                readonly property bool picked: row.current && index === row.chip
+                width: chipText.implicitWidth + 24
+                height: 30
+                color: picked || chipMouse.containsMouse ? Colors.surface : Colors.black
+                border.width: Style.border
+                border.color: picked ? Colors.neon : Colors.dim
+
+                Rectangle {
+                    visible: chipCell.on
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.margins: Style.border
+                    width: Style.marker
+                    color: Colors.neon
+                }
+                MonoText {
+                    id: chipText
+                    anchors.centerIn: parent
+                    font.bold: chipCell.on
+                    color: chipCell.on ? Colors.neon : Colors.gray2
+                    text: row.v(chipCell.modelData.title)
+                }
+                MouseArea {
+                    id: chipMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: chipCell.modelData.run()
+                }
+            }
+        }
+    }
 
     // ── group ───────────────
     Item {
@@ -58,7 +125,7 @@ Rectangle {
             font.pixelSize: 11
             font.bold: true
             color: Colors.acid
-            text: row.item.title
+            text: row.v(row.item.title) || ""
         }
         Rectangle {
             anchors.left: headerText.right
@@ -74,7 +141,7 @@ Rectangle {
     // icon / glyph / wallpaper
     Item {
         id: lead
-        visible: row.kind !== "header"
+        visible: !row.plain && row.kind !== "chips"
         anchors.left: parent.left
         anchors.leftMargin: 12
         anchors.verticalCenter: parent.verticalCenter
@@ -112,7 +179,7 @@ Rectangle {
     }
 
     Column {
-        visible: row.kind !== "header"
+        visible: !row.plain && row.kind !== "chips"
         anchors.left: lead.right
         anchors.right: trail.left
         anchors.leftMargin: 12
@@ -126,7 +193,7 @@ Rectangle {
             font.pixelSize: 14
             font.bold: row.on && row.kind !== "action"
             color: row.current || row.on ? Colors.neon : Colors.fg
-            text: row.item.title
+            text: row.v(row.item.title) || ""
         }
         MonoText {
             width: parent.width
@@ -161,7 +228,7 @@ Rectangle {
     // right side: tag, then the kind's control
     Row {
         id: trail
-        visible: row.kind !== "header"
+        visible: !row.plain && row.kind !== "chips"
         anchors.right: parent.right
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
@@ -208,7 +275,7 @@ Rectangle {
         LevelSlider {
             anchors.verticalCenter: parent.verticalCenter
             visible: row.kind === "level"
-            width: 240
+            width: 200
             value: row.kind === "level" ? row.v(row.item.value) : 0
             muted: row.kind === "level" && !!row.v(row.item.muted)
             onMoved: (x) => row.item.set(x)

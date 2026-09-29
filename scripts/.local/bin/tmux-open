@@ -1,0 +1,37 @@
+#!/bin/sh
+# Bring up tmux session NAME, from quickshell's hub (projects, sessions, ssh
+# hosts). A running session is used as is, a frozen one (the sessionizer's
+# ❄) is thawed, anything else is created in DIR (default ~), running CMD in
+# its first window if given — e.g. nvim for a project, ssh for a host.
+#
+# If a terminal is already showing tmux, that client switches over and its
+# window gets focus, same as picking the session in the sessionizer; with
+# no client attached it opens a new kitty on the session.
+#
+#   tmux-open NAME [DIR [CMD...]]
+name=$(printf '%s' "$1" | tr '.:' '__')
+dir=${2:-$HOME}
+[ $# -gt 2 ] && shift 2 || set --
+
+if ! tmux has-session -t "=$name" 2>/dev/null; then
+    "$HOME/.config/tmux/plugins/tmux-sessionizer/scripts/sessionizer.sh" --thaw "$name" 2>/dev/null
+fi
+if ! tmux has-session -t "=$name" 2>/dev/null; then
+    tmux new-session -ds "$name" -c "$dir" || exit 1
+    # through the shell, so quitting the program leaves a prompt behind
+    [ $# -gt 0 ] && tmux send-keys -t "=$name" "$*" Enter
+fi
+
+# most recently active client
+client=$(tmux list-clients -F '#{client_activity} #{client_tty} #{client_pid}' 2>/dev/null | sort -nr | head -n1)
+if [ -z "$client" ]; then
+    exec kitty tmux attach-session -t "=$name"
+fi
+set -- $client
+tmux switch-client -c "$2" -t "=$name"
+# focus the terminal showing it: walk up from the client to a pid sway knows
+pid=$3
+while [ -n "$pid" ] && [ "$pid" -gt 1 ]; do
+    swaymsg -q "[pid=$pid] focus" 2>/dev/null && exit 0
+    pid=$(ps -o ppid= -p "$pid" | tr -d ' ')
+done

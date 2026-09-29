@@ -28,7 +28,7 @@ set $browser flatpak run org.mozilla.firefox
 set $qs qs
 # The dots hub (~/.dots/quickshell/.config/quickshell/popups/Hub.qml):
 # launcher, settings and rice in one window, toggled over IPC per section.
-set $menu exec $qs ipc call hub toggle run
+set $menu exec $qs ipc call hub toggle all
 
 ### Theme (~/.rice)
 include ~/.rice/sway/theme.conf
@@ -121,7 +121,8 @@ input "type:keyboard" {
     # Close (quit) the focused window
     bindsym $mod+q kill
 
-    # The hub: run (launcher; $mod+d kept as an alias) and system settings
+    # The hub: home screen / command center ($mod+d kept as an alias), and
+    # straight to system settings
     bindsym $mod+space exec $menu
     bindsym $mod+d exec $menu
     bindsym $mod+s exec $qs ipc call hub toggle system

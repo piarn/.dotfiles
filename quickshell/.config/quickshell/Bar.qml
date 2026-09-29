@@ -180,6 +180,38 @@ Variants {
                     }
                 }
 
+                // Focus timer from the hub while it runs; click to stop.
+                Item {
+                    visible: FocusState.running
+                    anchors.verticalCenter: parent.verticalCenter
+                    implicitWidth: focusRow.implicitWidth
+                    implicitHeight: focusRow.implicitHeight
+
+                    Row {
+                        id: focusRow
+                        spacing: 5
+
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.pixelSize: 13
+                            color: Colors.neon
+                            text: "\u{f051f}"
+                        }
+                        MonoText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Colors.neon
+                            text: FocusState.text()
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: FocusState.stop()
+                    }
+                }
+
                 // The only widget: quick settings, which holds everything else
                 // (network, bluetooth, notifications, battery, tray; each tile's
                 // › opens that feature's full popup). The icon only carries what
