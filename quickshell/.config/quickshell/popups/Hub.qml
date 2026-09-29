@@ -20,8 +20,8 @@
 //
 // Opened from sway over IPC (a wlroots compositor offers no global
 // shortcuts to clients): `qs ipc call hub toggle system`, or `hub open
-// system session` to land on a group. The old `launcher` target still
-// works for apps.
+// system session` to land on a group. The mini runner ($mod+d,
+// popups/Runner.qml) is the compact apps-only version.
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -343,16 +343,6 @@ CardWindow {
         function close(): void { hub.visible = false }
     }
 
-    // The launcher's old target: `open '@'`-style binds.
-    IpcHandler {
-        target: "launcher"
-        function toggle(): void { hub.toggle("apps") }
-        function close(): void { hub.visible = false }
-        function open(text: string): void {
-            hub.show("all")
-            input.text = text
-        }
-    }
 
     // ── layout ──────────────────────────────────────────────────────────
 

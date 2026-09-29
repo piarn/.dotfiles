@@ -62,7 +62,8 @@ Alt is left to apps.
 | Keys | Action |
 | --- | --- |
 | `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |
-| `$mod+Space` (or `$mod+d`) | hub: the command center (see below) |
+| `$mod+Space` | hub: the command center (see below) |
+| `$mod+d` | mini runner: just apps and the prefix modes below |
 | `$mod+s` | hub: system settings |
 | `$mod+q` | close window |
 | `$mod+v` | clipboard history (cliphist) |
@@ -116,7 +117,7 @@ A leading character switches to a mode:
 | `?` | web search (or open an address) |
 | `@` | switch to an open window |
 
-`qs ipc call launcher open '<text>'` opens it pre-typed, e.g. `'@'` to
+`qs ipc call launcher open '<text>'` opens the mini runner pre-typed, e.g. `'@'` to
 bind a key straight to the window switcher; `qs ipc call hub toggle <scope>`
 and `qs ipc call hub open <scope> <group>` open a scope or group.
 

@@ -121,10 +121,10 @@ input "type:keyboard" {
     # Close (quit) the focused window
     bindsym $mod+q kill
 
-    # The hub: home screen / command center ($mod+d kept as an alias), and
-    # straight to system settings
+    # The hub (command center) and straight to its system settings; $mod+d
+    # is the mini runner — apps and the =calc >run /files ?web @windows modes
     bindsym $mod+space exec $menu
-    bindsym $mod+d exec $menu
+    bindsym $mod+d exec $qs ipc call launcher toggle
     bindsym $mod+s exec $qs ipc call hub toggle system
 
     # Clipboard history picker (quickshell, fed by cliphist)

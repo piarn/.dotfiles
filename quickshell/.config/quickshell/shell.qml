@@ -5,8 +5,8 @@
 // content itself.
 //
 // Layout: state/ holds the pragma-Singleton status backends, popups/ holds
-// the click-to-open menus plus the free-standing surfaces (Hub — launcher,
-// settings and rice in one — ClipboardMenu, LockScreen, toasts, OSD; the
+// the click-to-open menus plus the free-standing surfaces (Hub — the
+// command center — and the mini Runner, ClipboardMenu, LockScreen, toasts, OSD; the
 // hub's sections live in popups/hub/), components/ holds
 // shared UI pieces (BarPopup is the shell every bar popup is built on).
 // Bar.qml and this file stay at the root since every popup/state type ends
@@ -25,6 +25,7 @@ ShellRoot {
 
     Bar {}
     Hub {}
+    Runner {}
     ClipboardMenu {}
     NetworkMenu {}
     BatteryMenu {}
