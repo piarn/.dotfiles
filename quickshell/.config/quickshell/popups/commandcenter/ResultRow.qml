@@ -1,8 +1,8 @@
-// One row of the hub's list. `item` describes it; any field may be a
-// function, evaluated here so live values stay reactive per row (see
-// SystemSection). Kinds:
+// One row of the command center's result list. `item` describes it; any
+// field may be a function, evaluated here so live values stay reactive per
+// row. Kinds:
 //   header  group label, never selected
-//   action  runs and closes the hub (`confirm`: needs Enter twice)
+//   action  runs and closes the command center (`confirm`: needs Enter twice)
 //   toggle  on/off, stays open            choice  ● one of a set
 //   level   0..1 bar: set(v), adjust(d); Enter/run mutes
 //   page    Enter opens item.rows()       info    read-only
@@ -35,7 +35,7 @@ Rectangle {
 
     width: ListView.view ? ListView.view.width : 0
     readonly property bool plain: kind === "header" || kind === "status"
-    height: kind === "header" ? 30 : kind === "theme" ? 76 : kind === "status" ? 30 : kind === "chips" ? 44 : 40
+    height: kind === "header" ? 26 : kind === "theme" ? 68 : kind === "status" ? 26 : kind === "chips" ? 38 : 34
     color: !plain && kind !== "chips" && (current || mouse.containsMouse) ? Colors.surface : "transparent"
 
     MouseArea {

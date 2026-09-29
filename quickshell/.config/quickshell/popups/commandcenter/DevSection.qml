@@ -1,7 +1,7 @@
-// The hub's "dev" scope: tmux sessions (running and the sessionizer's
-// frozen ones), git projects, and ssh hosts — each opened as a tmux
-// session through ~/.local/bin/tmux-open, which switches the terminal
-// already showing tmux or opens a kitty. One session per case: a project
+// Data for the command center's `~` (dev) mode: tmux sessions (running and
+// the sessionizer's frozen ones), git projects, and ssh hosts — each opened
+// as a tmux session through ~/.local/bin/tmux-open, which switches the
+// terminal already showing tmux or opens a kitty. One session per case: a project
 // session is named after its directory and starts nvim, a host session
 // starts ssh.
 import Quickshell
@@ -12,7 +12,7 @@ Item {
     id: root
 
     readonly property string name: "dev"
-    readonly property string glyph: "\u{f0169}"
+    readonly property string glyph: "\u{eb8e}"   // terminal
     readonly property string home: Quickshell.env("HOME")
     readonly property string open: home + "/.local/bin/tmux-open"
 
@@ -31,7 +31,7 @@ Item {
     function sessionRows() {
         return sessions.map(s => ({
             kind: "action", group: "session", key: "tmux:" + s.name,
-            title: s.name, glyph: s.frozen ? "\u{f0717}" : "\u{f018d}",
+            title: s.name, glyph: s.frozen ? "\u{eb3b}" : "\u{e1c4}",   // ac_unit / play_circle
             aliases: "tmux session case",
             subtitle: s.frozen ? "frozen · enter thaws" : s.windows + " windows" + (s.attached ? " · attached" : ""),
             on: s.attached,
@@ -44,7 +44,7 @@ Item {
             const name = p.replace(/\/$/, "").split("/").pop().replace(/^\./, "")
             return {
                 kind: "action", group: "project", key: "project:" + p,
-                title: name, glyph: "\u{f02a2}", aliases: "project repo git code",
+                title: name, glyph: "\u{e97a}", aliases: "project repo git code",   // account_tree
                 subtitle: short(p),
                 run: () => Quickshell.execDetached([root.open, name, p, "nvim"]),
             }
@@ -54,7 +54,7 @@ Item {
     function hostRows() {
         return hosts.map(h => ({
             kind: "action", group: "ssh", key: "ssh:" + h,
-            title: h, glyph: "\u{f08c0}", aliases: "ssh host server remote",
+            title: h, glyph: "\u{e875}", aliases: "ssh host server remote",   // dns
             subtitle: "ssh " + h,
             run: () => Quickshell.execDetached([root.open, "ssh-" + h, root.home, "ssh", h]),
         }))

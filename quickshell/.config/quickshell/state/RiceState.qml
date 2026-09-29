@@ -1,9 +1,11 @@
 // What ~/.rice offers and what's active: themes (with their palette and
 // wallpaper, for previews), screen layouts, and the current pick of each.
-// Read with one python3 pass (tomllib) on refresh() — the hub calls it when
-// it opens; applying goes through ~/.rice/bin/apply-* like everywhere else.
-// A theme switch restarts quickshell (apply-theme), so only a layout switch
-// needs the refresh afterwards.
+// Read with one python3 pass (tomllib) on refresh() — run once at startup
+// (Component.onCompleted) so the command center's `:theme`/`:layout` mode
+// has data without needing anything to open first; applying goes through
+// ~/.rice/bin/apply-* like everywhere else. A theme switch restarts
+// quickshell (apply-theme), so only a layout switch needs the refresh
+// afterwards.
 pragma Singleton
 import Quickshell
 import Quickshell.Io

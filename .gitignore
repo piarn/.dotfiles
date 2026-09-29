@@ -8,3 +8,4 @@ git/.gitconfig.identity.work
 
 # per-machine list of enabled extras (extras/extras.sh)
 .extras-enabled
+.superpowers/

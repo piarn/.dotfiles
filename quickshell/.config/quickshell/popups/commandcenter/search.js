@@ -1,5 +1,6 @@
 .pragma library
-// Pure helpers for the hub (popups/Hub.qml): match scoring and the `=` calculator.
+// Pure helpers for the command center (popups/CommandCenter.qml): match
+// scoring and the `=` calculator.
 // No QML types in here, so it can be exercised with plain node.
 
 // How well `text` matches the lowercase query `q`, or -1 for no match.

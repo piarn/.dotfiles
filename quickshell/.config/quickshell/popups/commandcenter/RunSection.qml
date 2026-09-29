@@ -1,11 +1,16 @@
-// The hub's "run" section — what the launcher was. Plain text searches apps
-// by name, description and keywords ("pdf" finds Zathura), most-launched
-// first; a leading character switches mode:
+// The command center's mode dispatcher. Plain text searches apps by name,
+// description and keywords ("pdf" finds Zathura), most-launched first; a
+// leading character switches mode:
 //   =  calculator, Enter copies     >  shell command
 //   /  files (empty: recently opened)
 //   ?  web search                   @  open windows
-// System actions, themes and layouts used to be a `:` mode here; they're
-// hub sections now, reachable from the same search box.
+//   ~  dev: tmux sessions, git projects, ssh hosts (needs devRows)
+//   !  tools: capture, clipboard, notifications (needs toolRows)
+//   :  system actions (lock/reload/suspend/logout/reboot/shutdown),
+//      :theme <name>, :layout <name>
+// devRows/toolRows are handed in from outside (CommandCenter.qml's
+// DevSection/ToolsSection instances) rather than owned here, keeping this
+// section a pure data/ranking layer.
 // Items: {title, subtitle, icon (theme name) or glyph, key (usage
 // counting), run(alt)}.
 import Quickshell
@@ -18,16 +23,20 @@ Item {
     id: root
 
     readonly property string name: "run"
-    readonly property string glyph: "\u{f0349}"
+    readonly property string glyph: "\u{e5c3}"   // apps
 
     property string query: ""
-    property bool active: false   // the hub is open
+    property bool active: false   // the command center is open
+    property var devRows: []
+    property var toolRows: []
+    signal openPopup(string popup)
 
     readonly property string home: Quickshell.env("HOME")
     readonly property string term: "kitty"
     readonly property string searchUrl: "https://duckduckgo.com/?q="
 
-    readonly property var prefixes: ({ "=": "calc", ">": "run", "/": "files", "?": "web", "@": "windows" })
+    readonly property var prefixes: ({ "=": "calc", ">": "run", "/": "files", "?": "web", "@": "windows",
+                                        "~": "dev", "!": "tools", ":": "session" })
     readonly property string mode: prefixes[query.charAt(0)] ?? "apps"
     readonly property string rest: (mode === "apps" ? query : query.slice(1)).trim()
 
@@ -46,6 +55,9 @@ Item {
         case "files": return fileResults()
         case "web": return webResults()
         case "windows": return windowResults()
+        case "dev": return devResults()
+        case "tools": return toolResults()
+        case "session": return sessionResults()
         default: return appResults(rest)
         }
     }
@@ -62,7 +74,10 @@ Item {
             return (results.length ? "" : "nothing matches · ") + "enter open · shift+enter show in Dolphin"
         case "web": return "enter search"
         case "windows": return "enter focus"
-        default: return "=calc  >run  /files  ?web  @windows"
+        case "dev": return "enter opens a tmux session"
+        case "tools": return "enter runs · toggles stay open"
+        case "session": return rest.match(/^(theme|layout)\b/) ? "enter applies" : "enter acts · destructive actions need enter twice"
+        default: return "=calc  >run  /files  ?web  @windows  ~dev  !tools  :session"
         }
     }
 
@@ -75,8 +90,22 @@ Item {
             .map(x => x.it)
     }
 
-    // Apps matching q, each with its score `s` so the hub can merge them
-    // with other sections' matches.
+    // Same as ranked(), but most-used-first on an empty query and boosted
+    // by usage on a non-empty one — same frecency treatment as apps. Only
+    // for items with a `key` (dev rows); tools deliberately don't get this,
+    // they stay in their authored order.
+    function rankedByUsage(items, q, fieldsOf) {
+        if (q === "")
+            return items.slice().sort((a, b) => LauncherUsage.weight(b.key || "") - LauncherUsage.weight(a.key || ""))
+        return items
+            .map(it => ({ it, s: Search.match(fieldsOf(it), q) }))
+            .filter(x => x.s >= 0)
+            .map(x => ({ it: x.it, s: x.s + 40 * Math.log2(1 + LauncherUsage.weight(x.it.key || "")) }))
+            .sort((a, b) => b.s - a.s)
+            .map(x => x.it)
+    }
+
+    // Apps matching q, most-used first once a query narrows them.
     function appResults(q) {
         const out = []
         for (const e of apps) {
@@ -113,14 +142,14 @@ Item {
         const v = expr === "" ? null : Search.calc(expr)
         if (v === null) return []
         const s = Search.formatNumber(v)
-        return [{ kind: "action", title: s, subtitle: expr + " =", glyph: "\u{f00ec}",
+        return [{ kind: "action", title: s, subtitle: expr + " =", glyph: "\u{ea5f}",   // calculate
                   run: () => Quickshell.execDetached(["wl-copy", "--", s]) }]
     }
 
     function runResults() {
         const cmd = rest
         if (cmd === "") return []
-        return [{ kind: "action", title: cmd, subtitle: "run command", glyph: "\u{f018d}",
+        return [{ kind: "action", title: cmd, subtitle: "run command", glyph: "\u{eb8e}",   // terminal
                   run: alt => Quickshell.execDetached(alt ? ["sh", "-c", cmd]
                                                           : [root.term, "--hold", "sh", "-c", cmd]) }]
     }
@@ -131,7 +160,7 @@ Item {
             kind: "action",
             title: path.replace(/\/$/, "").split("/").pop(),
             subtitle: path.startsWith(home) ? "~" + path.slice(home.length) : path,
-            glyph: f.dir ? "\u{f024b}" : "\u{f0214}",
+            glyph: f.dir ? "\u{e2c8}" : "\u{e873}",   // folder_open / description
             run: alt => Quickshell.execDetached(alt
                 ? ["flatpak", "run", "org.kde.dolphin", "--select", path]
                 : ["xdg-open", path]),
@@ -150,10 +179,10 @@ Item {
         // something that looks like an address opens directly
         if (/^\S+\.[a-z]{2,}(\/\S*)?$/i.test(q)) {
             const url = /^[a-z]+:\/\//i.test(q) ? q : "https://" + q
-            out.push({ kind: "action", title: url, subtitle: "open address", glyph: "\u{f059f}",
+            out.push({ kind: "action", title: url, subtitle: "open address", glyph: "\u{e89d}",   // open_in_browser
                        run: () => Quickshell.execDetached(["xdg-open", url]) })
         }
-        out.push({ kind: "action", title: q, subtitle: "search the web", glyph: "\u{f0349}",
+        out.push({ kind: "action", title: q, subtitle: "search the web", glyph: "\u{ef7a}",   // search
                    run: () => Quickshell.execDetached(["xdg-open", root.searchUrl + encodeURIComponent(q)]) })
         return out
     }
@@ -168,7 +197,7 @@ Item {
                 subtitle: (entry ? entry.name : w.app) + " · " + where,
                 appName: entry ? entry.name : w.app,
                 icon: entry ? entry.icon : "",
-                glyph: "\u{f05af}",
+                glyph: "\u{f088}",   // window
                 run: () => Quickshell.execDetached(["swaymsg", "[con_id=" + w.id + "] focus"]),
             }
         })
@@ -176,6 +205,62 @@ Item {
             { text: it.title, weight: 1, loose: true },
             { text: it.appName, weight: 1, loose: true },
         ])
+    }
+
+    function devResults() {
+        return rankedByUsage(devRows.filter(r => r.kind !== "header"), rest, it => [
+            { text: it.title, weight: 1, loose: true },
+            { text: it.aliases || "", weight: 0.6 },
+        ])
+    }
+
+    // Deliberately plain ranked(), not rankedByUsage(): tools stay in
+    // their authored order rather than reshuffling by how often you use
+    // each one.
+    function toolResults() {
+        return ranked(toolRows.filter(r => r.kind !== "header"), rest, it => [
+            { text: it.title, weight: 1, loose: true },
+            { text: it.aliases || "", weight: 0.6 },
+        ]).map(it => it.kind === "page" ? Object.assign({}, it, {
+            kind: "action", run: () => root.openPopup(it.group === "clipboard" ? "clipboard" : "notifications"),
+        }) : it)
+    }
+
+    readonly property var sessionActions: [
+        { title: "lock", glyph: "\u{e899}", aliases: "screen",
+          cmd: ["qs", "ipc", "call", "lock", "lock"] },
+        { title: "reload", glyph: "\u{e5d5}", aliases: "restart refresh sway quickshell",
+          cmd: ["sh", "-c", "pkill -KILL -x quickshell; swaymsg reload"] },
+        { title: "suspend", glyph: "\u{f159}", aliases: "sleep",
+          cmd: ["systemctl", "suspend"] },
+        { title: "logout", glyph: "\u{e9ba}", aliases: "exit quit sway",
+          cmd: ["swaymsg", "exit"], confirm: true },
+        { title: "reboot", glyph: "\u{f053}", aliases: "restart",
+          cmd: ["systemctl", "reboot"], confirm: true },
+        { title: "shutdown", glyph: "\u{f8c7}", aliases: "poweroff off halt",
+          cmd: ["systemctl", "poweroff"], confirm: true },
+    ]
+
+    function sessionResults() {
+        const m = rest.match(/^(theme|layout)\s*(.*)$/i)
+        if (m) {
+            const q = m[2].trim()
+            if (m[1].toLowerCase() === "theme")
+                return ranked(RiceState.themes, q, t => [{ text: t.name, weight: 1, loose: true }])
+                    .map(t => ({ kind: "theme", group: "theme", title: t.name, colors: t.colors, wallpaper: t.wallpaper,
+                                 subtitle: t.id === RiceState.currentTheme ? "current theme" : "",
+                                 on: t.id === RiceState.currentTheme, run: () => RiceState.applyTheme(t.id) }))
+            return ranked(RiceState.layouts, q, l => [{ text: l, weight: 1, loose: true }])
+                .map(l => ({ kind: "choice", group: "layout", title: l, subtitle: l === RiceState.currentLayout ? "current layout" : "apply screen layout",
+                             glyph: "\u{e9b0}", on: l === RiceState.currentLayout, run: () => RiceState.applyLayout(l) }))
+        }
+        return ranked(sessionActions, rest, a => [
+            { text: a.title, weight: 1, loose: true },
+            { text: a.aliases, weight: 0.6 },
+        ]).map(a => ({
+            kind: "action", group: "session", title: a.title, subtitle: a.aliases, glyph: a.glyph, confirm: !!a.confirm,
+            run: () => Quickshell.execDetached(a.cmd),
+        }))
     }
 
     onModeChanged: {

@@ -26,9 +26,9 @@ set $files flatpak run org.kde.dolphin
 set $browser flatpak run org.mozilla.firefox
 # quickshell's IPC client (the distro package)
 set $qs qs
-# The dots hub (~/.dots/quickshell/.config/quickshell/popups/Hub.qml):
-# launcher, settings and rice in one window, toggled over IPC per section.
-set $menu exec $qs ipc call hub toggle all
+# The command center (~/.dots/quickshell/.config/quickshell/popups/CommandCenter.qml):
+# apps plus the prefix modes (=calc >run /files ?web @windows ~dev !tools :session).
+set $menu exec $qs ipc call commandcenter toggle
 
 ### Theme (~/.rice)
 include ~/.rice/sway/theme.conf
@@ -107,8 +107,8 @@ input "type:keyboard" {
 # One rule throughout: $mod+<letter> is the everyday action, named by its
 # first letter where possible; $mod+Shift is the bigger version — move
 # things, capture the screen, or system actions (reload, session).
-# Nothing ends the session directly: logout sits behind the hub's session
-# rows, which ask for Enter twice.
+# Nothing ends the session directly: logout sits behind the command
+# center's `:` session rows, which ask for Enter twice.
 # Plain Alt is left alone for apps (Firefox, nvim, tmux).
 #
 # Basics:
@@ -121,11 +121,11 @@ input "type:keyboard" {
     # Close (quit) the focused window
     bindsym $mod+q kill
 
-    # The hub (command center) and straight to its system settings; $mod+d
-    # is the mini runner — apps and the =calc >run /files ?web @windows modes
+    # The command center — apps plus the prefix modes (=calc >run /files
+    # ?web @windows ~dev !tools :session). $mod+Space and $mod+d are the
+    # same window; either key opens it.
     bindsym $mod+space exec $menu
-    bindsym $mod+d exec $qs ipc call launcher toggle
-    bindsym $mod+s exec $qs ipc call hub toggle system
+    bindsym $mod+d exec $qs ipc call commandcenter toggle
 
     # Clipboard history picker (quickshell, fed by cliphist)
     bindsym $mod+v exec $qs ipc call clipboard toggle
@@ -147,16 +147,17 @@ input "type:keyboard" {
     # manual way out when a frozen popup is holding the keyboard/pointer.
     bindsym $mod+Shift+c exec pkill -KILL -x quickshell; reload
 
-    # No dedicated exit-sway bind: logout lives in the hub's session group.
+    # No dedicated exit-sway bind: logout lives in the command center's
+    # `:` session mode.
 
     # Lock the screen — quickshell's own session-lock surface (Toxic-themed,
     # blurred screenshot background), see
     # ~/.dots/quickshell/.config/quickshell/popups/LockScreen.qml
     bindsym $mod+Escape exec $qs ipc call lock lock
 
-    # The hub's session group (lock/reload/suspend/logout/reboot/shutdown) —
-    # the deliberate next step up from the direct lock
-    bindsym $mod+Shift+Escape exec $qs ipc call hub open system session
+    # The command center's `:` session mode (lock/reload/suspend/logout/
+    # reboot/shutdown) — the deliberate next step up from the direct lock
+    bindsym $mod+Shift+Escape exec $qs ipc call commandcenter open ":"
 
     # Quick settings — the bar's only widget, and the way into network,
     # bluetooth, notifications and battery

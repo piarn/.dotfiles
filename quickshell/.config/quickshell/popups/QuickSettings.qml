@@ -213,7 +213,7 @@ BarPopup {
         // Wi-Fi on/off is in the network popup's header.
         ToggleTile {
             width: menu.tileWidth
-            icon: menu.activeVpns.length ? "\u{f0582}" : NetworkState.icon(menu.primaryNet)
+            icon: menu.activeVpns.length ? "\u{e62f}" : NetworkState.icon(menu.primaryNet)   // vpn_lock
             title: !menu.primaryNet || !menu.primaryNet.connected ? "Offline"
                 : menu.primaryNet.type === "wifi" ? menu.primaryNet.connection
                 : menu.primaryNet.type === "wwan" ? "Mobile" : "Ethernet"
@@ -231,7 +231,7 @@ BarPopup {
 
         ToggleTile {
             width: menu.tileWidth
-            icon: BluetoothState.powered ? (BluetoothState.connectedDevices.length ? "\u{f00b1}" : "\u{f00af}") : "\u{f00b2}"
+            icon: BluetoothState.powered ? (BluetoothState.connectedDevices.length ? "\u{e1a8}" : "\u{e1a7}") : "\u{e1a9}"
             title: "Bluetooth"
             subtitle: !BluetoothState.available ? "no adapter"
                 : !BluetoothState.powered ? "off"
@@ -245,7 +245,7 @@ BarPopup {
 
         ToggleTile {
             width: menu.tileWidth
-            icon: NotificationState.dnd ? "\u{f009b}" : "\u{f009a}"
+            icon: NotificationState.dnd ? "\u{e7f6}" : "\u{e7f5}"   // notifications_off / notifications
             title: "Silence"
             subtitle: [NotificationState.dnd ? "toasts hidden" : "off",
                        NotificationState.notifications.length ? NotificationState.notifications.length + " unread" : ""]
@@ -258,7 +258,7 @@ BarPopup {
 
         ToggleTile {
             width: menu.tileWidth
-            icon: "\u{f0176}"
+            icon: "\u{efef}"   // coffee (keep awake)
             title: "Keep awake"
             subtitle: IdleState.inhibit ? "no idle lock" : "off"
             active: IdleState.inhibit
@@ -267,7 +267,7 @@ BarPopup {
 
         ToggleTile {
             width: menu.tileWidth
-            icon: "\u{f0594}"
+            icon: "\u{f03d}"   // nightlight
             title: "Night light"
             subtitle: !NightLightState.available ? "install wlsunset"
                 : NightLightState.active ? NightLightState.temperature + "K" : "off"
@@ -277,8 +277,8 @@ BarPopup {
 
         ToggleTile {
             width: menu.tileWidth
-            icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "\u{f032a}"
-                : PowerProfiles.profile === PowerProfile.Performance ? "\u{f04c5}" : "\u{f05d1}"
+            icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "\u{efde}"   // battery_saver
+                : PowerProfiles.profile === PowerProfile.Performance ? "\u{e9e4}" : "\u{eaf6}"   // speed / balance
             title: "Power mode"
             subtitle: menu.profileName(PowerProfiles.profile)
             active: PowerProfiles.profile !== PowerProfile.Balanced
@@ -325,7 +325,7 @@ BarPopup {
 
     LevelRow {
         visible: BrightnessState.available
-        icon: "\u{f00e0}"
+        icon: "\u{e1ac}"   // brightness_high
         value: BrightnessState.value
         onMoved: (v) => BrightnessState.set(v)
         onStepped: (d) => BrightnessState.set(BrightnessState.value + d)
@@ -370,10 +370,10 @@ BarPopup {
 
             Repeater {
                 model: [
-                    { glyph: "\u{f04ae}", enabled: menu.player && menu.player.canGoPrevious, act: () => menu.player.previous() },
-                    { glyph: menu.player && menu.player.isPlaying ? "\u{f03e4}" : "\u{f040a}",
+                    { glyph: "\u{e045}", enabled: menu.player && menu.player.canGoPrevious, act: () => menu.player.previous() },   // skip_previous
+                    { glyph: menu.player && menu.player.isPlaying ? "\u{e034}" : "\u{e037}",   // pause / play_arrow
                       enabled: menu.player && menu.player.canTogglePlaying, act: () => menu.player.togglePlaying() },
-                    { glyph: "\u{f04ad}", enabled: menu.player && menu.player.canGoNext, act: () => menu.player.next() },
+                    { glyph: "\u{e044}", enabled: menu.player && menu.player.canGoNext, act: () => menu.player.next() },   // skip_next
                 ]
 
                 delegate: Rectangle {
@@ -457,7 +457,7 @@ BarPopup {
                 baseColor: Colors.red
                 onClicked: {
                     menu.close()
-                    Quickshell.execDetached(["qs", "ipc", "call", "hub", "open", "system", "session"])
+                    Quickshell.execDetached(["qs", "ipc", "call", "commandcenter", "open", ":"])
                 }
             }
         }

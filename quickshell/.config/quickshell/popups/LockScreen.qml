@@ -9,11 +9,12 @@
 // rather than reusing swaylock's or login's).
 //
 // Triggered by `qs ipc call lock lock` — sway's $mod+Escape bind, and the
-// hub's session "lock" row, both just shell out to that same IPC call
-// rather than referencing this file directly, same loose coupling as the
-// hub's own toggles. Deliberately no Escape-to-dismiss
-// keybinding anywhere in this file: unlike the hub, this is a
-// security surface, so the only way out is a correct password.
+// command center's `:lock` session action, both just shell out to that
+// same IPC call rather than referencing this file directly, same loose
+// coupling as the command center's own toggles. Deliberately no
+// Escape-to-dismiss keybinding anywhere in this file: unlike the command
+// center, this is a security surface, so the only way out is a correct
+// password.
 //
 import Quickshell
 import Quickshell.Io

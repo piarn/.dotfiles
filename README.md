@@ -54,17 +54,15 @@ session/window/pane tree popup, and direct Alt binds — see
 
 ## Desktop
 
-sway + [quickshell](quickshell/.config/quickshell) (bar, popups, the dots
-hub, lock screen, notifications). The rule: `$mod`+letter is the everyday
-action, `$mod+Shift` is the bigger version (move, capture, system). Plain
-Alt is left to apps.
+sway + [quickshell](quickshell/.config/quickshell) (bar, popups, the
+command center, lock screen, notifications). The rule: `$mod`+letter is
+the everyday action, `$mod+Shift` is the bigger version (move, capture,
+system). Plain Alt is left to apps.
 
 | Keys | Action |
 | --- | --- |
 | `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |
-| `$mod+Space` | hub: the command center (see below) |
-| `$mod+d` | mini runner: just apps and the prefix modes below |
-| `$mod+s` | hub: system settings |
+| `$mod+Space` / `$mod+d` | the command center (same window, either key) |
 | `$mod+q` | close window |
 | `$mod+v` | clipboard history (cliphist) |
 | `$mod+e` | file manager (Dolphin) |
@@ -82,32 +80,12 @@ Alt is left to apps.
 | `$mod+Shift+s` | region screenshot: frozen screen in satty, crop, Enter saves + copies |
 | `$mod+Shift+r` | start/stop screen recording to `~/Videos/Captures` (click a window, drag a region, or click a monitor's bar) |
 | `$mod+Escape` | lock |
-| `$mod+Shift+Escape` | hub: session (lock, suspend, logout, reboot, shutdown) |
+| `$mod+Shift+Escape` | command center: `:` session mode (lock, suspend, logout, reboot, shutdown) |
 | `$mod+Shift+c` | reload sway and restart quickshell |
 
-The hub is the command center. It opens on a home screen with a live status
-line, quick toggles (wi-fi, bluetooth, silence, awake, night, power profile),
-what you use most, your tmux sessions and the focus timer. One search box
-reaches everything across its scopes:
-
-| Scope | What |
-| --- | --- |
-| apps | applications, most-used first (plus the prefix modes below) |
-| dev | tmux sessions (running and frozen), git projects, ssh hosts from `~/.ssh/config`; Enter opens one as a tmux session (`tmux-open`) in the terminal already showing tmux, or a new kitty |
-| system | Wi-Fi and networks, VPNs, Bluetooth and devices, volume/mic and audio devices, brightness, night light, screen layout, power profile, keep awake, session |
-| style | rice themes, previewed with wallpaper and palette |
-| tools | region screenshot, screen recording, color picker (`color-pick`), focus timer (shown on the bar), clipboard history, notifications |
-
-Typing ranks all of them together, so `night` finds night light, `ember` the
-theme and `firefox` the app. A scope or group name followed by a space narrows
-to it: `vpn `, `theme to`, `ssh `, `dev app`.
-
-Keys: ↑↓ or `^j`/`^k` move, Enter acts, ←→ pick a quick toggle or nudge a
-volume/brightness row, Tab/Shift+Tab switch scope, Backspace on an empty box
-goes back out of a list (e.g. wi-fi networks), and Esc closes. Logout, reboot
-and shutdown need Enter twice. The mouse works everywhere too.
-
-A leading character switches to a mode:
+The command center is a search box and a short list: apps, most-used
+first, ranked by name/description/keywords ("pdf" finds Zathura). A
+leading character switches to a mode:
 
 | Prefix | Mode |
 | --- | --- |
@@ -116,10 +94,16 @@ A leading character switches to a mode:
 | `/` | files under `~` via fd (empty: recently opened); Shift+Enter shows it in Dolphin |
 | `?` | web search (or open an address) |
 | `@` | switch to an open window |
+| `~` | dev: tmux sessions (running and frozen), git projects, ssh hosts from `~/.ssh/config`; Enter opens one as a tmux session (`tmux-open`) in the terminal already showing tmux, or a new kitty |
+| `!` | tools: region screenshot, screen recording, color picker (`color-pick`), clipboard history, notifications, silence |
+| `:` | session: lock, reload, suspend, logout, reboot, shutdown (the last three need Enter twice); `:theme <name>`, `:layout <name>` |
 
-`qs ipc call launcher open '<text>'` opens the mini runner pre-typed, e.g. `'@'` to
-bind a key straight to the window switcher; `qs ipc call hub toggle <scope>`
-and `qs ipc call hub open <scope> <group>` open a scope or group.
+Keys: ↑↓ or `^j`/`^k` move, Enter acts, Esc closes. The mouse works
+everywhere too.
+
+`qs ipc call commandcenter toggle` opens/closes it; `commandcenter open
+'<text>'` opens it pre-typed, e.g. `'@'` to bind a key straight to the
+window switcher, or `':'` straight to session actions.
 
 The bar's ≡ quick settings is the mouse-first glance of the same things
 (plus the tray, notifications and media), and its popups hold the deep
