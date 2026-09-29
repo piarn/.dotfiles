@@ -29,6 +29,16 @@ it never installs one for you. Everything else (the base desktop stack,
 `tailscale`, `zerotier`, `openconnect`/`openvpn`/`vpnc`/`wireguard`) has
 an official package on all three and needs nothing extra.
 
+Quickshell itself is the one exception to "install from the distro's
+package manager": `install_quickshell()` in `install.sh` builds it from
+source, pinned to one git tag (`QUICKSHELL_VERSION`), the same on every
+distro — it ships no prebuilt binary, has no official Ubuntu package at
+all, and Fedora/Debian/Arch each package a different point release, which
+risks breaking the QML API this whole desktop is built against. Costs a
+handful of `-devel` build dependencies and a few minutes compiling on a
+fresh install; a version marker at `~/.local/share/dots-quickshell-version`
+makes re-runs a no-op until `QUICKSHELL_VERSION` is bumped.
+
 `.bootstrap/` holds machine-setup helpers `install.sh` drives: system
 packages (`packages.txt`) and the one-time fish plugin-manager setup
 (`fish/install_fisher.sh`, `fish/install_bass.sh` — normally a no-op since

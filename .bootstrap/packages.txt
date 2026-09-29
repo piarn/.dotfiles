@@ -18,10 +18,11 @@ fd-find
 foot
 kitty
 sway
-# bar + command center (~/.dots/quickshell); packaged natively on Fedora
-# (dnf), Debian sid (apt — may lag on stable/testing), and Arch's official
-# extra repo (pacman); no AUR needed for this one
-quickshell
+# quickshell is NOT listed here — install.sh's install_quickshell()
+# builds it from a pinned source tag instead of using distro packages
+# (see the comment there for why: no prebuilt binaries, no official
+# Ubuntu package, and version drift across distros risks breaking the
+# QML this whole desktop is built against)
 grim
 wf-recorder
 cliphist

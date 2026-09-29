@@ -184,6 +184,69 @@ install_rice() {
 # installed straight from each project's GitHub release binaries instead.
 LOCAL_BIN="$HOME/.local/bin"
 
+# Quickshell ships no prebuilt binary (no AppImage, no GitHub release
+# tarball like yazi/lazygit get) and Fedora/Debian/Arch each package
+# their own point release, sometimes months apart — risky for something
+# this repo's entire desktop is built against the QML API of (quickshell
+# itself warns it can break across Qt updates). Built from source instead,
+# pinned to one tag, identical on every distro, rather than trusting
+# whatever each one happens to have packaged. Installs to ~/.local (no
+# sudo needed for the build itself, just for its distro build deps);
+# `qs` is a convenience symlink distro packages add that upstream's own
+# build doesn't produce, so this makes one too.
+QUICKSHELL_VERSION=v0.3.1
+QUICKSHELL_VERSION_FILE="$HOME/.local/share/dots-quickshell-version"
+
+install_quickshell() {
+    if [ -x "$LOCAL_BIN/quickshell" ] \
+        && [ "$(cat "$QUICKSHELL_VERSION_FILE" 2>/dev/null)" = "$QUICKSHELL_VERSION" ]; then
+        return
+    fi
+
+    echo "==> installing quickshell $QUICKSHELL_VERSION's build dependencies"
+    if command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y cmake ninja-build pkgconf-pkg-config gcc-c++ \
+            qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtwayland-devel \
+            qt6-qt5compat-devel qt6-qtimageformats qt6-qtshadertools-devel \
+            libdrm-devel wayland-devel wayland-protocols-devel mesa-libgbm-devel \
+            vulkan-headers spirv-tools-devel cli11-devel pipewire-devel \
+            pam-devel jemalloc-devel
+    elif command -v apt >/dev/null 2>&1; then
+        sudo apt update && sudo apt install -y cmake ninja-build pkgconf g++ \
+            qt6-base-dev qt6-declarative-dev qt6-wayland-dev qt6-shadertools-dev \
+            qt6-base-private-dev qt6-declarative-private-dev qt6-wayland-private-dev \
+            libcli11-dev libwayland-dev wayland-protocols libpipewire-0.3-dev \
+            libpam0g-dev libpolkit-agent-1-dev libpolkit-gobject-1-dev libglib2.0-dev \
+            libdrm-dev libgbm-dev libjemalloc-dev libegl-dev libgles-dev libvulkan-dev \
+            libxcb1-dev spirv-tools
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -S --needed --noconfirm base-devel cmake ninja pkgconf \
+            cli11 qt6-shadertools spirv-tools vulkan-headers wayland-protocols \
+            qt6-base qt6-declarative qt6-wayland wayland libdrm libpipewire pam \
+            polkit mesa libxcb cpptrace jemalloc
+    else
+        echo "error: no supported package manager (apt/dnf/pacman) for quickshell's build deps" >&2
+        exit 1
+    fi
+
+    echo "==> building quickshell $QUICKSHELL_VERSION from source (a few minutes)"
+    local tmp
+    tmp=$(mktemp -d)
+    git clone --branch "$QUICKSHELL_VERSION" --depth 1 \
+        https://git.outfoxxed.me/outfoxxed/quickshell "$tmp/quickshell"
+    (
+        cd "$tmp/quickshell"
+        cmake -GNinja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local"
+        cmake --build build
+        cmake --install build
+    )
+    rm -rf "$tmp"
+
+    ln -sf "$LOCAL_BIN/quickshell" "$LOCAL_BIN/qs"
+    mkdir -p "$(dirname "$QUICKSHELL_VERSION_FILE")"
+    echo "$QUICKSHELL_VERSION" >"$QUICKSHELL_VERSION_FILE"
+}
+
 case "$(uname -m)" in
     x86_64) RELEASE_ARCH=x86_64; YAZI_ARCH=x86_64-unknown-linux-gnu ;;
     aarch64) RELEASE_ARCH=arm64; YAZI_ARCH=aarch64-unknown-linux-gnu ;;
@@ -343,6 +406,7 @@ install_fish_plugins() {
 }
 
 install_packages
+install_quickshell
 install_flatpaks
 install_node
 install_rice
