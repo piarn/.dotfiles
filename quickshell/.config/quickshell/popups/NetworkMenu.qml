@@ -340,7 +340,7 @@ BarPopup {
 
                     Icon {
                         color: vpnRow.modelData.active ? Colors.neon : Colors.gray
-                        text: "\u{f0582}"
+                        text: "\u{e62f}"   // vpn_lock
                     }
                     MonoText {
                         width: parent.width - 30
@@ -390,7 +390,7 @@ BarPopup {
                         width: 18
                         color: provRow.vpn.busy || provRow.vpn.warning ? Colors.amber
                             : provRow.vpn.active ? Colors.neon : Colors.gray
-                        text: "\u{f0582}"
+                        text: "\u{e62f}"   // vpn_lock
                     }
 
                     Column {
@@ -462,7 +462,7 @@ BarPopup {
                             Icon {
                                 anchors.centerIn: parent
                                 color: Colors.gray2
-                                text: provRow.expanded ? "\u{f0140}" : "\u{f0142}"
+                                text: provRow.expanded ? "\u{e5ce}" : "\u{e5cf}"   // expand_less / expand_more
                             }
                             MouseArea {
                                 id: chevMouse
@@ -550,7 +550,7 @@ BarPopup {
                 anchors.verticalCenter: parent.verticalCenter
                 font.pixelSize: 12
                 color: Colors.gray
-                text: "\u{f002}"
+                text: "\u{ef7a}"   // search
             }
 
             TextInput {
@@ -592,7 +592,7 @@ BarPopup {
                 width: visible ? implicitWidth : 0
                 font.pixelSize: 12
                 color: clearMouse.containsMouse ? Colors.fg : Colors.gray
-                text: "\u{f00d}"
+                text: "\u{e5cd}"   // close
 
                 MouseArea {
                     id: clearMouse
@@ -693,7 +693,7 @@ BarPopup {
                         anchors.verticalCenter: parent.verticalCenter
                         font.pixelSize: 12
                         color: Colors.gray2
-                        text: netRow.modelData.security ? "\u{f033e}" : ""
+                        text: netRow.modelData.security ? "\u{e899}" : ""   // lock
                     }
                     MonoText {
                         anchors.verticalCenter: parent.verticalCenter

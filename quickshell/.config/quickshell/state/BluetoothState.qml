@@ -58,12 +58,12 @@ Item {
 
     function icon(device) {
         const i = device.icon || ""
-        if (i.startsWith("audio")) return "\u{f02cb}"
-        if (i === "input-mouse") return "\u{f037d}"
-        if (i === "input-keyboard") return "\u{f030c}"
-        if (i === "input-gaming") return "\u{f0297}"
-        if (i === "phone") return "\u{f011c}"
-        return "\u{f00af}"
+        if (i.startsWith("audio")) return "\u{e60f}"   // bluetooth_audio
+        if (i === "input-mouse") return "\u{e323}"     // mouse
+        if (i === "input-keyboard") return "\u{e312}"  // keyboard
+        if (i === "input-gaming") return "\u{ea28}"    // sports_esports
+        if (i === "phone") return "\u{e7ba}"           // smartphone
+        return "\u{e1a7}"   // bluetooth
     }
 
     Timer {

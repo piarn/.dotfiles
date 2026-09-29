@@ -26,11 +26,19 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import quickshell
+import "../state"
 
 PanelWindow {
     id: root
 
     property bool centered: false
+    // Centered popups (CommandCenter, ClipboardMenu) never anchor to a
+    // bar widget's own screen, so without this they always land on
+    // whichever output Quickshell treats as first — not necessarily the
+    // one you're looking at. Bar popups override this with their own
+    // `screen: PopupState.screen` (the bar widget that was clicked), so
+    // this default only ever takes effect for the centered ones.
+    screen: PopupState.focusedScreen
     // Label cut into the top rule; content starting at y >= contentTop
     // clears it.
     property string title: ""

@@ -31,11 +31,11 @@ PanelWindow {
 
     function glyph() {
         const v = OsdState.value
-        if (OsdState.kind === "brightness") return v < 0.34 ? "\u{f00de}" : v < 0.67 ? "\u{f00df}" : "\u{f00e0}"
-        if (OsdState.kind === "mic") return OsdState.muted ? "\u{f036d}" : "\u{f036c}"
-        if (OsdState.muted) return "\u{f075f}"
-        if (v <= 0) return "\u{f0581}"
-        return v < 0.34 ? "\u{f057f}" : v < 0.67 ? "\u{f0580}" : "\u{f057e}"
+        if (OsdState.kind === "brightness") return v < 0.34 ? "\u{e1ad}" : v < 0.67 ? "\u{e1ae}" : "\u{e1ac}"
+        if (OsdState.kind === "mic") return OsdState.muted ? "\u{e02b}" : "\u{e31d}"
+        if (OsdState.muted) return "\u{e04f}"   // volume_off
+        if (v <= 0) return "\u{e04e}"           // volume_mute
+        return v < 0.34 ? "\u{e04d}" : v < 0.67 ? "\u{e79c}" : "\u{e050}"
     }
 
     Rectangle {

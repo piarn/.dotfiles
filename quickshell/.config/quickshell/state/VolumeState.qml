@@ -38,18 +38,18 @@ Item {
     function setSource(node) { Pipewire.preferredDefaultAudioSource = node }
 
     function speakerIcon() {
-        if (!root.sinkAudio) return "\u{f0581}"
-        if (root.sinkAudio.muted) return "\u{f075f}"
+        if (!root.sinkAudio) return "\u{e04e}"   // volume_mute
+        if (root.sinkAudio.muted) return "\u{e04f}"   // volume_off
         const v = root.sinkAudio.volume
-        if (v <= 0) return "\u{f0581}"
-        if (v < 0.34) return "\u{f057f}"
-        if (v < 0.67) return "\u{f0580}"
-        return "\u{f057e}"
+        if (v <= 0) return "\u{e04e}"
+        if (v < 0.34) return "\u{e04d}"   // volume_down
+        if (v < 0.67) return "\u{e79c}"   // volume_down_alt
+        return "\u{e050}"   // volume_up
     }
 
     function micIcon() {
-        if (!root.sourceAudio) return "\u{f036d}"
-        return root.sourceAudio.muted ? "\u{f036d}" : "\u{f036c}"
+        if (!root.sourceAudio) return "\u{e02b}"   // mic_off
+        return root.sourceAudio.muted ? "\u{e02b}" : "\u{e31d}"   // mic
     }
 
     function toggleMute(audio) {

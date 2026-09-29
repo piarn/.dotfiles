@@ -37,7 +37,7 @@ Item {
         visible: root.expandable
         font.pixelSize: 14
         color: root.expanded || chevronMouse.containsMouse ? Colors.neon : Colors.gray2
-        text: "\u{f0140}"
+        text: "\u{e5cf}"   // expand_more (rotates to expand_less when expanded)
         rotation: root.expanded ? 180 : 0
         Behavior on rotation { NumberAnimation { duration: Style.fast } }
 

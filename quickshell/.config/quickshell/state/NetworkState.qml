@@ -57,20 +57,20 @@ Item {
     }
 
     function icon(dev) {
-        if (!dev) return wifiEnabled ? "\u{f092d}" : "\u{f05aa}"
+        if (!dev) return wifiEnabled ? "\u{e63e}" : "\u{e648}"   // wifi / wifi_off
         if (dev.type === "wifi") {
-            if (!dev.connected) return wifiEnabled ? "\u{f092e}" : "\u{f05aa}"
+            if (!dev.connected) return wifiEnabled ? "\u{e63e}" : "\u{e648}"
             return wifiGlyph(dev.signal)
         }
-        if (dev.type === "wwan") return "\u{f0a60}"
-        return dev.connected ? "\u{f0200}" : "\u{f0319}"
+        if (dev.type === "wwan") return "\u{e1b9}"   // network_cell
+        return dev.connected ? "\u{e8be}" : "\u{eb2f}"   // settings_ethernet / lan
     }
 
     function wifiGlyph(pct) {
-        if (pct >= 75) return "\u{f0928}"
-        if (pct >= 50) return "\u{f0925}"
-        if (pct >= 25) return "\u{f0922}"
-        return "\u{f091f}"
+        if (pct >= 75) return "\u{e1ba}"   // network_wifi (full)
+        if (pct >= 50) return "\u{ebe1}"   // network_wifi_3_bar
+        if (pct >= 25) return "\u{ebd6}"   // network_wifi_2_bar
+        return "\u{ebe4}"   // network_wifi_1_bar
     }
 
     // nmcli -t escapes ":" and "\" inside values (SSIDs can contain both),

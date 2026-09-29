@@ -57,7 +57,7 @@ CardWindow {
                 Icon {
                     anchors.verticalCenter: parent.verticalCenter
                     color: backMouse.containsMouse ? Colors.fg : Colors.gray2
-                    text: "\u{f0141}"
+                    text: "\u{e5c4}"   // arrow_back
                 }
                 MonoText {
                     anchors.verticalCenter: parent.verticalCenter

@@ -36,15 +36,27 @@ Column {
 
             Marker { visible: row.active }
 
+            Icon {
+                id: checkIcon
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                width: 16
+                visible: row.active
+                font.pixelSize: 13
+                color: Colors.neon
+                text: "\u{e668}"   // check
+            }
+
             MonoText {
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.leftMargin: 10
+                anchors.leftMargin: 10 + checkIcon.width
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
                 color: row.active ? Colors.neon : Colors.fg
                 elide: Text.ElideRight
-                text: (row.active ? "\u{f00c} " : "  ") + (row.modelData.description || row.modelData.name)
+                text: row.modelData.description || row.modelData.name
             }
 
             MouseArea {
