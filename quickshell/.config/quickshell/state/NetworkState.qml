@@ -379,7 +379,11 @@ Item {
     Process {
         id: monitorProc
         running: true
-        command: ["nmcli", "monitor"]
+        // quickshell is SIGKILLed on reload/hang ($mod+Shift+c, qs-watchdog,
+        // dots-reload), which a long-lived child never notices; pdeathsig has
+        // the kernel kill it along with quickshell instead of leaking one per
+        // restart.
+        command: ["setpriv", "--pdeathsig", "KILL", "nmcli", "monitor"]
         stdout: SplitParser { onRead: debounce.restart() }
         // nmcli monitor exits if NetworkManager restarts — pick it back up.
         onExited: respawn.start()

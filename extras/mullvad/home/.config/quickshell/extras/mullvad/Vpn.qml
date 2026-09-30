@@ -114,7 +114,8 @@ VpnProvider {
     Process {
         id: listenProc
         running: root.available
-        command: ["mullvad", "status", "--json", "listen"]
+        // dies with quickshell (see NetworkState.qml's nmcli monitor)
+        command: ["setpriv", "--pdeathsig", "KILL", "mullvad", "status", "--json", "listen"]
         stdout: SplitParser {
             onRead: (line) => root.parseStatus(line)
         }

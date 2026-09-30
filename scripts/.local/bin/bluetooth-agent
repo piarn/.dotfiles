@@ -30,7 +30,10 @@
 # (it works fine on its own) never pays the restart cost.
 set -euo pipefail
 
-pgrep -x bluetoothctl >/dev/null 2>&1 && exit 0
+# No "already running" check: bluetooth-agent.service keeps this to one
+# instance, and the old `pgrep -x bluetoothctl` bail-out made the service
+# exit whenever any bluetoothctl was open (an interactive one, or a copy
+# a pre-systemd session left behind), leaving no agent under systemd.
 
 check_device_appeared() {
     local mac="$1" norm
