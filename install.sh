@@ -842,6 +842,11 @@ doctor() {
         ok "no tmux server running"
     fi
     if swaymsg -t get_version >/dev/null 2>&1; then
+        if sway --unsupported-gpu -C >/dev/null 2>&1; then
+            ok "sway config valid (sway -C)"
+        else
+            bad "sway config has errors (sway --unsupported-gpu -C); dots-reload won't reload it"
+        fi
         # sway hands back the main config text it loaded; includes aren't covered
         if swaymsg -t get_config \
             | python3 -c 'import json, sys; sys.exit(json.load(sys.stdin)["config"] != open(sys.argv[1]).read())' \

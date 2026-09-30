@@ -9,7 +9,8 @@
 #
 # The one reload path for install.sh, ~/.rice/bin/apply-theme (just the
 # targets a theme switch changed), extras.sh and the command center's
-# "reload". DOTS_NO_RELOAD=1 makes it a no-op: install.sh sets it around
+# "reload". sway is only reloaded when its config passes `sway -C`.
+# DOTS_NO_RELOAD=1 makes it a no-op: install.sh sets it around
 # apply-theme, since it reloads everything itself once it's done.
 [ -n "${DOTS_NO_RELOAD:-}" ] && exit 0
 [ $# -gt 0 ] || set -- tmux kitty fish quickshell sway wallpaper
@@ -28,6 +29,18 @@ for target; do
 done
 
 sway_up() { swaymsg -t get_version >/dev/null 2>&1; }
+
+sway_config="${DOTS_SWAY_CONFIG:-$HOME/.config/sway/config}"
+
+# A reload with a broken config applies what parses and drops the rest;
+# keep the running config instead. --unsupported-gpu: without it the
+# check always fails on the NVIDIA driver.
+sway_config_ok() {
+    out=$(sway --unsupported-gpu -C -c "$sway_config" 2>&1) && return 0
+    echo "warning: $sway_config has errors; not reloading sway (the running config stays):" >&2
+    printf '%s\n' "$out" | grep -i 'error' | grep -viE 'nvidia|nouveau|proprietary' >&2
+    return 1
+}
 
 if [ -n "$tmux" ] && tmux list-sessions >/dev/null 2>&1; then
     echo "==> reloading tmux"
@@ -50,6 +63,11 @@ if [ -n "$quickshell$sway" ] && ! sway_up; then
     pgrep -x sway >/dev/null \
         && echo "warning: sway is running but unreachable (SWAYSOCK unset?); skipped sway/quickshell" >&2
     quickshell=; sway=; wallpaper=
+fi
+
+# quickshell's restart needs the reload (exec_always respawns it)
+if [ -n "$quickshell$sway" ] && ! sway_config_ok; then
+    quickshell=; sway=
 fi
 
 # Same as $mod+Shift+c: Colors.qml isn't file-watched, so quickshell only
