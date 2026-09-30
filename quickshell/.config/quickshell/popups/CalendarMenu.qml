@@ -157,33 +157,26 @@ BarPopup {
 
     Divider {}
 
-    // notifications
-    Item {
-        width: parent.width
-        height: dndBtn.implicitHeight
+    // notifications: title, then its buttons on their own line (side by
+    // side they don't fit the calendar's width)
+    MonoText {
+        color: Colors.gray
+        text: "notifications" + (NotificationState.notifications.length ? " · " + NotificationState.notifications.length : "")
+    }
 
-        MonoText {
-            anchors.left: parent.left
-            color: Colors.gray
-            text: "notifications" + (NotificationState.notifications.length ? " · " + NotificationState.notifications.length : "")
+    Row {
+        spacing: 12
+
+        // do-not-disturb: hides toasts; critical ones still break through
+        TextButton {
+            label: NotificationState.dnd ? "silenced" : "silence"
+            baseColor: NotificationState.dnd ? Colors.red : Colors.acid
+            onClicked: NotificationState.toggleDnd()
         }
-
-        Row {
-            anchors.right: parent.right
-            spacing: 12
-
-            // do-not-disturb: hides toasts; critical ones still break through
-            TextButton {
-                id: dndBtn
-                label: NotificationState.dnd ? "silenced" : "silence"
-                baseColor: NotificationState.dnd ? Colors.red : Colors.acid
-                onClicked: NotificationState.toggleDnd()
-            }
-            TextButton {
-                visible: NotificationState.notifications.length > 0
-                label: "clear all"
-                onClicked: NotificationState.clearAll()
-            }
+        TextButton {
+            visible: NotificationState.notifications.length > 0
+            label: "clear all"
+            onClicked: NotificationState.clearAll()
         }
     }
 
