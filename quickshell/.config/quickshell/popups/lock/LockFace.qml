@@ -1,9 +1,9 @@
 // What one screen of the lock shows: a seven-segment clock, the date, the
-// password as 16 cells that light up per character, and the tmux-style
-// StatusLine. It owns the (invisible) text field keystrokes go to but none
-// of the authentication — LockScreen.qml wires `text`, `accepted` and the
-// state properties to PamContext — so it can be rendered in an ordinary
-// window for previews.
+// password as 16 cells that light up per character, and under it the
+// tmux-style StatusLine. It owns the (invisible) text field keystrokes go
+// to but none of the authentication — LockScreen.qml wires `text`,
+// `accepted` and the state properties to PamContext — so it can be
+// rendered in an ordinary window for previews.
 import QtQuick
 import quickshell
 import "../../components"
@@ -32,7 +32,6 @@ Rectangle {
 
     Column {
         anchors.centerIn: parent
-        anchors.verticalCenterOffset: -statusLine.height
         spacing: 36
 
         // HH:MM, the colon blinking with the seconds
@@ -145,10 +144,11 @@ Rectangle {
                     : input.length > Style.segments ? input.length + " chars" : ""
             }
         }
+
+        StatusLine {
+            id: statusLine
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
     }
 
-    StatusLine {
-        id: statusLine
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-    }
 }

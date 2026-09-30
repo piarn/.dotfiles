@@ -1,12 +1,12 @@
-// The lock screen's bottom bar, laid out like tmux's status line (dot +
-// name on the left, │-separated segments on the right). Display only:
-// LockScreen.qml feeds it, so it can also be rendered outside a session
-// lock for previews.
+// The lock screen's status, under the password field: two centered,
+// │-separated lines in the tmux status line's style — who and how long,
+// then connectivity and power. Display only: LockScreen.qml feeds it, so
+// it can also be rendered outside a session lock for previews.
 import QtQuick
 import quickshell
 import "../../components"
 
-Rectangle {
+Column {
     id: root
 
     property string host: ""
@@ -22,19 +22,12 @@ Rectangle {
     property bool charging: false
     property string batteryGlyph: ""
 
-    implicitHeight: 28
-    color: Colors.black
-
-    Rectangle {
-        anchors { left: parent.left; right: parent.right; top: parent.top }
-        height: Style.border
-        color: Colors.dim
-    }
+    spacing: Style.gap
 
     component Sep: MonoText { text: "│"; color: Colors.dim }
 
     Row {
-        anchors { left: parent.left; leftMargin: Style.pad; verticalCenter: parent.verticalCenter }
+        anchors.horizontalCenter: parent.horizontalCenter
         spacing: Style.gap
 
         MonoText { text: "●"; color: Colors.acid }
@@ -46,7 +39,7 @@ Rectangle {
     }
 
     Row {
-        anchors { right: parent.right; rightMargin: Style.pad; verticalCenter: parent.verticalCenter }
+        anchors.horizontalCenter: parent.horizontalCenter
         spacing: Style.gap
 
         Icon {
