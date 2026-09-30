@@ -19,6 +19,7 @@ fg() { printf '\033[38;2;%d;%d;%dm' "0x${1:1:2}" "0x${1:3:2}" "0x${1:5:2}"; }
 
 red=$(rice red '#e8606e') bg=$(rice black '#0a0f1a') gray=$(rice gray '#56657d') txt=$(rice fg '#dce6f5')
 # ~25% of the alert color over the background: visible, text stays readable
+# shellcheck disable=SC2046,SC2183 # word-split on purpose: one arg per channel
 tint=$(printf '#%02x%02x%02x' $(for i in 1 3 5; do
     echo $(((0x${red:$i:2} * 25 + 0x${bg:$i:2} * 75) / 100))
 done))

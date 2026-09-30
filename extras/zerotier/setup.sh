@@ -22,6 +22,7 @@ fi
 
 token="$HOME/.zeroTierOneAuthToken"
 if [ ! -s "$token" ]; then
+    # shellcheck disable=SC2024 # on purpose: root reads the secret, the copy is ours
     (umask 077 && sudo cat /var/lib/zerotier-one/authtoken.secret >"$token")
 fi
 

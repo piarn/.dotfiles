@@ -111,7 +111,8 @@ freeze() {
 }
 
 thaw() {
-    local name=$1 f=$FROZEN/$name.txt
+    local name=$1
+    local f=$FROZEN/$name.txt
     local first=1 _ widx wname wact layout wid pidx path pact cmd
     local active_win=
 
