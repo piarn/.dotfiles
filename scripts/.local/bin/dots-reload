@@ -1,0 +1,71 @@
+#!/bin/sh
+# Push the configs on disk into whatever is already running. Long-lived
+# processes read theirs once at startup, so e.g. a tmux server kept alive
+# by resurrect/continuum can sit on a weeks-old tmux.conf. Anything that
+# isn't running is skipped.
+#
+#   dots-reload                  everything
+#   dots-reload TARGET...        tmux kitty fish quickshell sway wallpaper
+#
+# The one reload path for install.sh, ~/.rice/bin/apply-theme (just the
+# targets a theme switch changed), extras.sh and the command center's
+# "reload". DOTS_NO_RELOAD=1 makes it a no-op: install.sh sets it around
+# apply-theme, since it reloads everything itself once it's done.
+[ -n "${DOTS_NO_RELOAD:-}" ] && exit 0
+[ $# -gt 0 ] || set -- tmux kitty fish quickshell sway wallpaper
+
+tmux=; kitty=; fish=; quickshell=; sway=; wallpaper=
+for target; do
+    case $target in
+        tmux) tmux=1 ;;
+        kitty) kitty=1 ;;
+        fish) fish=1 ;;
+        quickshell) quickshell=1 ;;
+        sway) sway=1 ;;
+        wallpaper) wallpaper=1 ;;
+        *) sed -n '7,8p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 1 ;;
+    esac
+done
+
+sway_up() { swaymsg -t get_version >/dev/null 2>&1; }
+
+if [ -n "$tmux" ] && tmux list-sessions >/dev/null 2>&1; then
+    echo "==> reloading tmux"
+    tmux source-file "$HOME/.config/tmux/tmux.conf" || echo "warning: tmux reload failed" >&2
+fi
+
+# kitty re-reads kitty.conf (and the ~/.rice theme it includes) on SIGUSR1
+if [ -n "$kitty" ] && pkill -USR1 -x kitty 2>/dev/null; then
+    echo "==> reloading kitty"
+fi
+
+# The prompt color is a universal variable, which fish broadcasts to every
+# running session as soon as one process sets it.
+if [ -n "$fish" ] && [ -f "$HOME/.rice/fish/colors.fish" ] && pgrep -x fish >/dev/null; then
+    echo "==> pushing prompt colors to running fish sessions"
+    fish -c "source $HOME/.rice/fish/colors.fish" || echo "warning: fish reload failed" >&2
+fi
+
+if [ -n "$quickshell$sway" ] && ! sway_up; then
+    pgrep -x sway >/dev/null \
+        && echo "warning: sway is running but unreachable (SWAYSOCK unset?); skipped sway/quickshell" >&2
+    quickshell=; sway=; wallpaper=
+fi
+
+# Same as $mod+Shift+c: Colors.qml isn't file-watched, so quickshell only
+# picks it up fresh. SIGKILL because `qs kill` asks over IPC, which a hung
+# instance never answers; sway's exec_always brings it back on the reload.
+if [ -n "$quickshell" ] && pkill -KILL -x quickshell 2>/dev/null; then
+    echo "==> restarting quickshell"
+    sway=1
+fi
+
+if [ -n "$sway" ]; then
+    echo "==> reloading sway"
+    swaymsg -q reload || echo "warning: swaymsg reload failed" >&2
+fi
+
+if [ -n "$wallpaper" ] && [ -f "$HOME/.rice/wallpaper.png" ] && sway_up; then
+    swaymsg -q output '*' bg "$HOME/.rice/wallpaper.png" fill
+fi
+exit 0

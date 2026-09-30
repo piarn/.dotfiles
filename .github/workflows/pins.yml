@@ -1,0 +1,45 @@
+# Weekly check of install.sh's pinned versions (RELEASE_VERSIONS and
+# QUICKSHELL_VERSION) against upstream. When any is behind it opens an
+# issue listing them, or updates the one already open, so pins don't rot
+# unnoticed. Bumping is still a manual edit: the install workflow then
+# tests the new versions on every distro.
+name: pins
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  outdated:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: check pins
+        run: |
+          status=0
+          out=$(./install.sh --outdated) || status=$?
+          [ "$status" -eq 2 ] && exit 1   # a lookup failed; don't guess
+          title="Pinned versions are behind upstream"
+          existing=$(gh issue list --state open --search "in:title \"$title\"" \
+            --json number --jq '.[0].number // empty')
+          if [ "$status" -eq 0 ]; then
+            echo "all pins current"
+            [ -z "$existing" ] || gh issue close "$existing" --comment "All pins are current now."
+            exit 0
+          fi
+          body=$(printf 'Newer releases than `install.sh` pins:\n\n```\n%s\n```\n\nBump `RELEASE_VERSIONS` / `QUICKSHELL_VERSION` in `install.sh`, then check the install workflow passes.\n' "$out")
+          echo "$body"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

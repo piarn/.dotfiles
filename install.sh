@@ -3,10 +3,13 @@
 set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES=(bash bat fd firefox fish foot git hidden-apps kde kitty lazydocker lazygit nvim quickshell ripgrep satty scripts sway tmux yazi)
+PACKAGES=(bash bat fd firefox fish foot git hidden-apps kde kitty lazydocker lazygit nvim quickshell ripgrep satty scripts ssh sway tmux yazi)
 BOOTSTRAP_DIR="$DOTS_DIR/.bootstrap"
 RICE_DIR="$HOME/.rice"
-RICE_REPO="git@github.com:piarn/.rice.git"
+# Fetched over https so a fresh machine needs no ssh key to install;
+# pushes still go over ssh.
+RICE_REPO="https://github.com/piarn/.rice.git"
+RICE_PUSH_URL="git@github.com:piarn/.rice.git"
 
 # A few packages install a binary whose name doesn't match the package
 # name, so a plain `command -v <package>` never finds them and they'd get
@@ -18,11 +21,14 @@ declare -A PACKAGE_BIN_OVERRIDES=(
     [ripgrep]=rg
     [neovim]=nvim
     [git-delta]=delta
+    [ShellCheck]=shellcheck
 )
 
 # apt sometimes uses a differently-cased/named package than dnf's
 # packages.txt name — add an entry here when that happens.
-declare -A APT_NAME_OVERRIDES=()
+declare -A APT_NAME_OVERRIDES=(
+    [ShellCheck]=shellcheck
+)
 
 # Same idea for pacman — Arch mostly matches dnf's naming (it's the
 # outlier that needs translating, not the rule), so this only needs
@@ -30,6 +36,7 @@ declare -A APT_NAME_OVERRIDES=()
 declare -A ARCH_NAME_OVERRIDES=(
     [fd-find]=fd              # Arch just calls it fd, no split like Fedora/Debian
     [pulseaudio-utils]=libpulse   # pactl ships in libpulse, pulled in either by pipewire-pulse or pulseaudio
+    [ShellCheck]=shellcheck
 )
 
 # Installs everything listed in .bootstrap/packages.txt (one binary/package
@@ -167,6 +174,36 @@ install_lsp_servers() {
         +qa 2>&1 | grep -Ev '^\[[a-zA-Z0-9._-]+\] +(log|fetch|status|checkout)' || true
 }
 
+# Keep .rice in step with .dots: fast-forward only, and a failure (local
+# edits in the way, diverged history, offline) never blocks the install.
+# A local branch with no upstream (an experiment) is left alone entirely.
+update_rice() {
+    local branch
+    branch=$(git -C "$RICE_DIR" branch --show-current)
+    if ! git -C "$RICE_DIR" rev-parse -q --verify '@{upstream}' >/dev/null 2>&1; then
+        echo "==> .rice is on ${branch:-a detached HEAD} with no upstream; not updating it"
+        return
+    fi
+    echo "==> updating .rice ($branch)"
+    # sway/outputs.conf used to be tracked and is gitignored now: a
+    # clone from before that has it both tracked and locally modified,
+    # which makes the pull that untracks it refuse to run (and one that
+    # did run would delete it). Keep this machine's copy across the pull.
+    local outputs="$RICE_DIR/sway/outputs.conf" outputs_copy=""
+    if [ -f "$outputs" ]; then
+        outputs_copy=$(mktemp)
+        cp "$outputs" "$outputs_copy"
+        git -C "$RICE_DIR" checkout -q -- sway/outputs.conf 2>/dev/null || true
+    fi
+    git -C "$RICE_DIR" pull --ff-only \
+        || echo "warning: couldn't fast-forward $RICE_DIR; continuing with what's there" >&2
+    if [ -n "$outputs_copy" ]; then
+        mkdir -p "$(dirname "$outputs")"   # the pull may have removed sway/ with it
+        cp "$outputs_copy" "$outputs"
+        rm -f "$outputs_copy"
+    fi
+}
+
 # .dots owns configs; .rice owns the styling layer they include/symlink
 # from (sway gaps/colors/screen-layout, tmux/nvim/fish accents,
 # yazi/lazygit/lazydocker/firefox theme files, ...). Clone it if
@@ -176,27 +213,14 @@ install_rice() {
     if [ ! -d "$RICE_DIR/.git" ]; then
         echo "==> cloning .rice"
         git clone "$RICE_REPO" "$RICE_DIR"
+        git -C "$RICE_DIR" remote set-url --push origin "$RICE_PUSH_URL"
     else
-        # Keep .rice in step with .dots: fast-forward only, and a failure
-        # (local edits in the way, diverged history, offline) never blocks the install.
-        echo "==> updating .rice"
-        # sway/outputs.conf used to be tracked and is gitignored now: a
-        # clone from before that has it both tracked and locally modified,
-        # which makes the pull that untracks it refuse to run (and one that
-        # did run would delete it). Keep this machine's copy across the pull.
-        local outputs="$RICE_DIR/sway/outputs.conf" outputs_copy=""
-        if [ -f "$outputs" ]; then
-            outputs_copy=$(mktemp)
-            cp "$outputs" "$outputs_copy"
-            git -C "$RICE_DIR" checkout -q -- sway/outputs.conf 2>/dev/null || true
+        # Clones from before the https switch fetch over ssh too.
+        if [ "$(git -C "$RICE_DIR" remote get-url origin 2>/dev/null)" = "$RICE_PUSH_URL" ]; then
+            git -C "$RICE_DIR" remote set-url origin "$RICE_REPO"
+            git -C "$RICE_DIR" remote set-url --push origin "$RICE_PUSH_URL"
         fi
-        git -C "$RICE_DIR" pull --ff-only \
-            || echo "warning: couldn't fast-forward $RICE_DIR; continuing with what's there" >&2
-        if [ -n "$outputs_copy" ]; then
-            mkdir -p "$(dirname "$outputs")"   # the pull may have removed sway/ with it
-            cp "$outputs_copy" "$outputs"
-            rm -f "$outputs_copy"
-        fi
+        update_rice
     fi
     # sway/outputs.conf is per-machine (gitignored) and normally written by
     # apply-layout, which needs a running sway. Seed the laptop profile —
@@ -208,7 +232,8 @@ install_rice() {
         { echo "# generated by install.sh from $RICE_DIR/layouts/laptop.conf"
           cat "$RICE_DIR/layouts/laptop.conf"; } >"$RICE_DIR/sway/outputs.conf"
     fi
-    "$RICE_DIR/bin/apply-theme"
+    # everything gets reloaded once, at the end of the install
+    DOTS_NO_RELOAD=1 "$RICE_DIR/bin/apply-theme"
     if command -v swaymsg >/dev/null 2>&1 && swaymsg -t get_version >/dev/null 2>&1; then
         "$RICE_DIR/bin/apply-layout" --auto
     fi
@@ -317,8 +342,13 @@ install_quickshell() {
 . "$DOTS_DIR/extras/lib.sh"
 
 polkit_agent_installed() {
-    grep -o '/usr/lib[a-z]*/[^ ]*-authentication-agent-1' "$DOTS_DIR/scripts/.local/bin/polkit-agent" \
-        | while IFS= read -r agent; do [ -x "$agent" ] && echo "$agent"; done | grep -q .
+    local agent
+    # not a pipeline into the loop: under pipefail its status would be the
+    # last candidate's [ -x ], failing whenever that one isn't this distro's
+    for agent in $(grep -o '/usr/lib[a-z]*/[^ ]*-authentication-agent-1' "$DOTS_DIR/scripts/.local/bin/polkit-agent"); do
+        [ -x "$agent" ] && return 0
+    done
+    return 1
 }
 
 install_polkit_agent() {
@@ -333,23 +363,69 @@ reload_user_units() {
     systemctl --user daemon-reload >/dev/null 2>&1 || true
 }
 
+# The session's one ssh-agent (ssh/.config/systemd/user/ssh-agent.service).
+# Enabled rather than tied to dots-session.target: it lives as long as the
+# user manager, so loaded keys survive a sway restart.
+enable_ssh_agent() {
+    systemctl --user enable --now ssh-agent.service >/dev/null 2>&1 \
+        || echo "warning: couldn't enable ssh-agent.service (no systemd user session?)" >&2
+}
+
 case "$(uname -m)" in
     x86_64) RELEASE_ARCH=x86_64; YAZI_ARCH=x86_64-unknown-linux-gnu; MISE_ARCH=x64 ;;
     aarch64) RELEASE_ARCH=arm64; YAZI_ARCH=aarch64-unknown-linux-gnu; MISE_ARCH=arm64 ;;
     *) RELEASE_ARCH=""; YAZI_ARCH=""; MISE_ARCH="" ;;
 esac
 
-# Installs $bin_name from the latest GitHub release of $repo whose asset
+# Release-binary tools, pinned like quickshell so every machine (and CI)
+# runs the same versions. To upgrade one, bump its tag here and re-run
+# install.sh; --doctor flags a machine that's behind. Newest tag:
+#   curl -fsSL https://api.github.com/repos/<repo>/releases/latest | grep tag_name
+declare -A RELEASE_VERSIONS=(
+    [yazi]=v26.9.1
+    [satty]=v0.22.0
+    [lazygit]=v0.65.1
+    [lazydocker]=v0.25.2
+    [mise]=v2026.9.18
+)
+declare -A RELEASE_REPOS=(
+    [yazi]=sxyazi/yazi
+    [satty]=Satty-org/Satty
+    [lazygit]=jesseduffield/lazygit
+    [lazydocker]=jesseduffield/lazydocker
+    [mise]=jdx/mise
+)
+RELEASE_VERSION_DIR="$HOME/.local/share/dots-release-versions"
+
+# Whether ~/.local/bin/$1 is the pinned version: its marker says so, or
+# (a copy installed before pinning, with no marker) its --version does.
+release_current() {
+    local version="${RELEASE_VERSIONS[$1]}"
+    [ -x "$LOCAL_BIN/$1" ] || return 1
+    [ "$(cat "$RELEASE_VERSION_DIR/$1" 2>/dev/null)" = "$version" ] && return 0
+    [ ! -e "$RELEASE_VERSION_DIR/$1" ] && "$LOCAL_BIN/$1" --version 2>/dev/null | grep -qF "${version#v}"
+}
+
+# Installs $bin_name from its RELEASE_VERSIONS release of RELEASE_REPOS whose asset
 # filename contains $asset_pattern: downloads it, extracts it (.tar.gz or
 # .zip), and copies every binary named in $bin_names (may be more than
 # one, e.g. yazi ships a "ya" companion binary) into ~/.local/bin. A no-op
-# if $bin_name is already on PATH, so safe to re-run any time.
+# when that version is already installed, or when $bin_name was installed
+# some other way (a distro package, `go install`, ...).
 install_from_github_release() {
-    local bin_name="$1" repo="$2" asset_pattern="$3"
-    shift 3
+    local bin_name="$1" asset_pattern="$2"
+    shift 2
+    local repo="${RELEASE_REPOS[$bin_name]}"
     local bin_names=("$@")
+    local version="${RELEASE_VERSIONS[$bin_name]}"
+    local marker="$RELEASE_VERSION_DIR/$bin_name"
 
-    if command -v "$bin_name" >/dev/null 2>&1; then
+    if release_current "$bin_name"; then
+        mkdir -p "$RELEASE_VERSION_DIR"
+        echo "$version" >"$marker"
+        return
+    fi
+    if [ ! -e "$LOCAL_BIN/$bin_name" ] && command -v "$bin_name" >/dev/null 2>&1; then
         return
     fi
     if [ -z "$asset_pattern" ]; then
@@ -357,17 +433,17 @@ install_from_github_release() {
         return
     fi
 
-    echo "==> installing $bin_name from github.com/$repo (latest release)"
+    echo "==> installing $bin_name $version from github.com/$repo"
     # CI runners share IPs, so unauthenticated API calls hit GitHub's rate
     # limit there; use its token when there is one.
     local url auth=()
     [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
-    url=$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/$repo/releases/latest" \
+    url=$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/$repo/releases/tags/$version" \
         | grep -o "\"browser_download_url\": *\"[^\"]*${asset_pattern}[^\"]*\"" \
         | head -1 \
         | sed -E 's/.*"(https[^"]+)"/\1/')
     if [ -z "$url" ]; then
-        echo "warning: no $bin_name release asset matching '$asset_pattern' found; install manually from https://github.com/$repo/releases" >&2
+        echo "warning: no $bin_name $version release asset matching '$asset_pattern' found; install manually from https://github.com/$repo/releases" >&2
         return
     fi
 
@@ -394,18 +470,21 @@ install_from_github_release() {
 
     if [ "$found" -eq 0 ]; then
         echo "warning: downloaded $bin_name release but found none of: ${bin_names[*]}" >&2
+        return
     fi
+    mkdir -p "$RELEASE_VERSION_DIR"
+    echo "$version" >"$marker"
 }
 
 install_yazi() {
-    install_from_github_release yazi sxyazi/yazi "${YAZI_ARCH}.zip" yazi ya
+    install_from_github_release yazi "${YAZI_ARCH}.zip" yazi ya
 }
 
 # No apt/dnf package on Fedora or Debian/Ubuntu; ships a prebuilt glibc
 # binary using the same target-triple naming as yazi's release assets, so
 # $YAZI_ARCH (e.g. "x86_64-unknown-linux-gnu") doubles as satty's too.
 install_satty() {
-    install_from_github_release satty Satty-org/Satty "${YAZI_ARCH}.tar.gz" satty
+    install_from_github_release satty "${YAZI_ARCH}.tar.gz" satty
 }
 
 # quickshell's bar uses a couple of Nerd Font icon glyphs (bluetooth on/off)
@@ -463,11 +542,11 @@ install_kde_flatpak_theme() {
 }
 
 install_lazygit() {
-    install_from_github_release lazygit jesseduffield/lazygit "linux_${RELEASE_ARCH}.tar.gz" lazygit
+    install_from_github_release lazygit "linux_${RELEASE_ARCH}.tar.gz" lazygit
 }
 
 install_lazydocker() {
-    install_from_github_release lazydocker jesseduffield/lazydocker "Linux_${RELEASE_ARCH}.tar.gz" lazydocker
+    install_from_github_release lazydocker "Linux_${RELEASE_ARCH}.tar.gz" lazydocker
 }
 
 # mise: per-project language toolchains (go, node, python, flutter, ...)
@@ -476,7 +555,7 @@ install_lazydocker() {
 # releases like lazygit. The asset pattern matches just the glibc tarball
 # (not -musl, .tar.zst or .sig).
 install_mise() {
-    install_from_github_release mise jdx/mise "linux-${MISE_ARCH}.tar.gz" mise
+    install_from_github_release mise "linux-${MISE_ARCH}.tar.gz" mise
 }
 
 install_tpm() {
@@ -562,10 +641,9 @@ preflight() {
             || problems+=("cannot reach https://$host")
     done
 
-    # .rice is cloned over ssh, so a working key matters up front.
     if [ ! -d "$RICE_DIR/.git" ] && [ "$MODE" != ci ]; then
         GIT_TERMINAL_PROMPT=0 git ls-remote "$RICE_REPO" HEAD >/dev/null 2>&1 \
-            || problems+=("cannot read $RICE_REPO (ssh key for github.com set up?)")
+            || problems+=("cannot read $RICE_REPO")
     fi
 
     if [ ${#problems[@]} -gt 0 ]; then
@@ -576,6 +654,29 @@ preflight() {
     echo "==> preflight OK"
 }
 
+
+# Where a package wants a link but something else is already there (a real
+# file, or a link stow doesn't own), move that aside into BACKUP_DIR so the
+# repo version wins. (stow --adopt used to pull such files into the repo
+# instead, silently replacing tracked content with the machine's copy.)
+# The conflicts come from stow's own dry run, so its ignore rules apply.
+BACKUP_DIR="$HOME/.local/state/dots/backup/$(date +%Y%m%d-%H%M%S)"
+
+stow_conflicts() {
+    stow -n -v --no-folding -d "$1" -t "$HOME" "$2" 2>&1 \
+        | sed -n -e 's/.* over existing target \(.*\) since .*/\1/p' \
+                 -e 's/.*existing target is not owned by stow: \(.*\)/\1/p'
+}
+
+backup_conflicts() {
+    local rel
+    while IFS= read -r rel; do
+        [ -n "$rel" ] || continue
+        mkdir -p "$(dirname "$BACKUP_DIR/$rel")"
+        mv -- "$HOME/$rel" "$BACKUP_DIR/$rel"
+        echo "==> moved existing ~/$rel aside to ${BACKUP_DIR/#"$HOME"/\~}/$rel"
+    done < <(stow_conflicts "$1" "$2")
+}
 
 # Symlinks in $HOME that point into ~/.dots or ~/.rice at a file that no
 # longer exists — left behind whenever a file is deleted or renamed in a
@@ -612,7 +713,15 @@ doctor() {
     if [ ${#missing[@]} -eq 0 ]; then ok "packages.txt"; else bad "not installed: ${missing[*]}"; fi
     polkit_agent_installed && ok "polkit agent" || bad "no polkit agent (mate-polkit)"
     for name in yazi satty lazygit lazydocker mise; do
-        command -v "$name" >/dev/null 2>&1 && ok "$name" || bad "$name not on PATH"
+        if release_current "$name"; then
+            ok "$name ${RELEASE_VERSIONS[$name]}"
+        elif [ -e "$LOCAL_BIN/$name" ]; then
+            bad "$name isn't the pinned ${RELEASE_VERSIONS[$name]} (run install.sh)"
+        elif command -v "$name" >/dev/null 2>&1; then
+            ok "$name (installed outside install.sh)"
+        else
+            bad "$name not on PATH"
+        fi
     done
     if [ "$(cat "$QUICKSHELL_VERSION_FILE" 2>/dev/null)" = "$QUICKSHELL_VERSION" ] && [ -x "$LOCAL_BIN/quickshell" ]; then
         ok "quickshell $QUICKSHELL_VERSION"
@@ -683,6 +792,54 @@ doctor() {
     else
         warn "not inside sway; skipped the session services"
     fi
+    if systemctl --user -q is-active ssh-agent.service; then
+        ok "ssh-agent.service"
+        [ "${SSH_AUTH_SOCK:-}" = "${XDG_RUNTIME_DIR:-}/ssh-agent.socket" ] || [ -n "${SSH_CONNECTION:-}" ] \
+            || warn "this shell's SSH_AUTH_SOCK isn't the session agent (${SSH_AUTH_SOCK:-unset}); log out and back in"
+    else
+        bad "ssh-agent.service not running (systemctl --user enable --now ssh-agent.service)"
+    fi
+
+    # Configs change on disk long before the processes using them restart
+    # (a tmux server kept alive by resurrect/continuum can outlive weeks
+    # of commits), so compare what's loaded against what's there.
+    echo "running configs"
+    local now newest loaded
+    now=$(date +%s)
+    if tmux list-sessions >/dev/null 2>&1; then
+        loaded=$(tmux show -gqv @dots-loaded)
+        newest=$(stat -L -c %Y "$HOME/.config/tmux/tmux.conf" "$RICE_DIR/tmux/theme.conf" \
+            "$DOTS_DIR"/tmux/.config/tmux/plugins/*/*.tmux 2>/dev/null | sort -n | tail -1)
+        if [ -z "$loaded" ]; then
+            bad "tmux server predates tmux.conf's load marker, so its config is likely stale (run dots-reload)"
+        elif [ "${newest:-0}" -gt "$loaded" ]; then
+            bad "tmux is running a tmux.conf/theme older than the one on disk (run dots-reload)"
+        else
+            ok "tmux config current"
+        fi
+    else
+        ok "no tmux server running"
+    fi
+    if swaymsg -t get_version >/dev/null 2>&1; then
+        # sway hands back the main config text it loaded; includes aren't covered
+        if swaymsg -t get_config \
+            | python3 -c 'import json, sys; sys.exit(json.load(sys.stdin)["config"] != open(sys.argv[1]).read())' \
+                "$HOME/.config/sway/config"; then
+            ok "sway config current"
+        else
+            bad "sway is running an older ~/.config/sway/config than the one on disk (run dots-reload)"
+        fi
+        # the rest of its QML is file-watched and reloads itself
+        local pid colors="$RICE_DIR/quickshell/Colors.qml"
+        pid=$(pgrep -xo quickshell || true)
+        if [ -n "$pid" ] && [ -f "$colors" ]; then
+            if [ "$(stat -c %Y "$colors")" -gt $((now - $(ps -o etimes= -p "$pid"))) ]; then
+                bad "quickshell started before the current theme's Colors.qml (run dots-reload)"
+            else
+                ok "quickshell colors current"
+            fi
+        fi
+    fi
 
     echo "repos"
     for dir in "$DOTS_DIR" "$RICE_DIR"; do
@@ -705,7 +862,7 @@ doctor() {
 # --ci (.github/workflows/ci.yml, as root in a fresh distro container):
 # everything that installs from a package manager or a download, so a
 # renamed/dropped package or a broken quickshell build fails there first.
-# Skips what needs a real user session or credentials: the ssh-cloned
+# Skips what needs a real user session or credentials: the cloned
 # .rice, flatpaks (system flatpak doesn't run in a container), PAM, and
 # the stow/tmux/LSP steps that depend on .rice being present.
 ci() {
@@ -723,12 +880,43 @@ ci() {
     polkit_agent_installed
 }
 
+# `./install.sh --outdated`: which pins (RELEASE_VERSIONS, QUICKSHELL_VERSION)
+# have a newer upstream release. Read-only; one "name pinned -> latest" line
+# per outdated pin. Exits 0 when all are current, 1 when any is behind, 2 if
+# a lookup failed. The weekly pins workflow opens an issue from its output.
+outdated() {
+    local name latest status=0 auth=()
+    [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
+    for name in yazi satty lazygit lazydocker mise; do
+        latest=$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/${RELEASE_REPOS[$name]}/releases/latest" \
+            | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+        if [ -z "$latest" ]; then
+            echo "error: couldn't look up the latest $name release" >&2
+            status=2
+        elif [ "$latest" != "${RELEASE_VERSIONS[$name]}" ]; then
+            echo "$name ${RELEASE_VERSIONS[$name]} -> $latest"
+            [ "$status" -eq 2 ] || status=1
+        fi
+    done
+    latest=$(git ls-remote --tags --refs https://git.outfoxxed.me/outfoxxed/quickshell 2>/dev/null \
+        | sed -n 's|.*refs/tags/\(v[0-9.]*\)$|\1|p' | sort -V | tail -1)
+    if [ -z "$latest" ]; then
+        echo "error: couldn't look up the latest quickshell tag" >&2
+        status=2
+    elif [ "$latest" != "$QUICKSHELL_VERSION" ]; then
+        echo "quickshell $QUICKSHELL_VERSION -> $latest"
+        [ "$status" -eq 2 ] || status=1
+    fi
+    return "$status"
+}
+
 MODE=install
 case "${1:-}" in
     --doctor) doctor; exit ;;
+    --outdated) outdated; exit ;;
     --ci) MODE=ci; ci; exit ;;
     '') ;;
-    *) echo "usage: $0 [--doctor | --ci]" >&2; exit 1 ;;
+    *) echo "usage: $0 [--doctor | --outdated | --ci]" >&2; exit 1 ;;
 esac
 
 preflight
@@ -749,7 +937,8 @@ cd "$DOTS_DIR"
 
 for pkg in "${PACKAGES[@]}"; do
     echo "==> stowing $pkg"
-    stow -v --no-folding --adopt -t "$HOME" "$pkg"
+    backup_conflicts "$DOTS_DIR" "$pkg"
+    stow -v --no-folding -t "$HOME" "$pkg"
 done
 
 # Opt-in extras (extras/extras.sh) stay out of PACKAGES; this only re-links
@@ -758,15 +947,20 @@ done
 prune_dangling_links
 
 reload_user_units
+enable_ssh_agent
 install_fish_plugins
 install_kde_flatpak_theme
 install_tpm
 "$HOME/.tmux/plugins/tpm/bin/install_plugins" >/dev/null 2>&1 || true
+# Long-lived processes (tmux server, sway, quickshell, kitty) read their
+# config once at startup; push what was just linked into them.
+"$DOTS_DIR/scripts/.local/bin/dots-reload"
 
 install_lsp_servers
 
 echo
-echo "Done. Review 'git status' / 'git diff' in $DOTS_DIR — --adopt pulls any"
-echo "pre-existing files at the target paths into the repo, which may have"
-echo "overwritten tracked content with your local version. Discard with"
-echo "'git checkout -- <file>' if the repo version should win instead."
+if [ -d "$BACKUP_DIR" ]; then
+    echo "Done. Files that were in the way of a link were moved to $BACKUP_DIR"
+else
+    echo "Done."
+fi

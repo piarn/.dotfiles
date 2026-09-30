@@ -57,11 +57,7 @@ prune_dirs() {
 # extras that actually add quickshell code.
 restart_quickshell() {
     [ -d "$EXTRAS_DIR/$1/home/.config/quickshell" ] || return 0
-    if pgrep -x quickshell >/dev/null && swaymsg -t get_version >/dev/null 2>&1; then
-        echo "==> restarting quickshell"
-        pkill -KILL -x quickshell || true
-        swaymsg -q reload
-    fi
+    "$EXTRAS_DIR/../scripts/.local/bin/dots-reload" quickshell
 }
 
 # systemd timers an extra ships (home/.config/systemd/user/*.timer, e.g.

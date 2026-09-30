@@ -294,8 +294,8 @@ Item {
     readonly property var sessionActions: [
         { title: "lock", glyph: "\u{e899}", aliases: "screen",
           cmd: ["qs", "ipc", "call", "lock", "lock"] },
-        { title: "reload", glyph: "\u{e5d5}", aliases: "restart refresh sway quickshell",
-          cmd: ["sh", "-c", "pkill -KILL -x quickshell; swaymsg reload"] },
+        { title: "reload", glyph: "\u{e5d5}", aliases: "restart refresh sway quickshell tmux kitty config",
+          cmd: [Quickshell.env("HOME") + "/.local/bin/dots-reload"] },
         { title: "suspend", glyph: "\u{f159}", aliases: "sleep",
           cmd: ["systemctl", "suspend"] },
         { title: "logout", glyph: "\u{e9ba}", aliases: "exit quit sway",

@@ -14,11 +14,14 @@ cd ~/.dots
 
 `install.sh` installs whatever's missing from `.bootstrap/packages.txt`
 (apt/dnf/pacman) and `.bootstrap/flatpaks.txt` (Flathub apps, system-wide),
-then symlinks each package into `$HOME`. It runs with `--adopt`,
-so any real file already sitting at a target path (e.g. an existing
-`~/.bashrc`) is moved into the repo first, then symlinked back — check
-`git diff` afterward and revert with `git checkout -- <file>` if the repo
-version should have won.
+then symlinks each package into `$HOME`. Anything already sitting at a
+target path (e.g. a distro's default `~/.bashrc`) is moved aside into
+`~/.local/state/dots/backup/<timestamp>/` first, so the repo version always
+wins and the old file is kept for reference. Finally it runs
+`dots-reload`, which pushes the new configs into whatever is already
+running (tmux server, kitty, sway, quickshell); run it by hand, or pick
+"reload" in the command center, any time a config changes under a running
+session.
 
 Tested distro families: Fedora (dnf), Debian/Ubuntu (apt), Arch (pacman).
 On Arch, three of the VPN extras (`mullvad`, `netbird`, `protonvpn`) and
@@ -48,10 +51,11 @@ package name (`ripgrep`→`rg`, `neovim`→`nvim`, `wl-clipboard`→`wl-copy`,
 `pulseaudio-utils`→`pactl`) or a differently-cased package name on apt —
 `install.sh` handles both via small override maps near the top.
 
-`yazi`, `lazygit`, `lazydocker` and `satty` aren't packaged for apt/dnf at
-all, so `install.sh` downloads each straight from its project's latest
-GitHub release binary into `~/.local/bin` instead (skipped if already
-installed some other way — e.g. `lazydocker` via `go install`).
+`yazi`, `lazygit`, `lazydocker`, `satty` and `mise` aren't packaged for
+apt/dnf, so `install.sh` downloads each from its project's GitHub releases
+into `~/.local/bin` instead, pinned to the tag in `RELEASE_VERSIONS` (bump
+it and re-run to upgrade; skipped if installed some other way — e.g.
+`lazydocker` via `go install`).
 
 ### Checking a machine
 
@@ -62,7 +66,9 @@ installed some other way — e.g. `lazydocker` via `go install`).
 Read-only: lists what `install.sh` would still install or link (via
 stow's dry run), links in `$HOME` left dangling by files since removed from
 a package (a normal `install.sh` run deletes those), and — inside sway —
-which session services aren't running. Exits 1 if anything failed.
+which session services aren't running, and whether tmux, sway or
+quickshell are running an older config than the one on disk (fix: run
+`dots-reload`). Exits 1 if anything failed.
 
 CI (`.github/workflows`) runs shellcheck and `fish --no-execute` over the
 repo on every push, and `./install.sh --ci` in fresh Fedora, Debian,
@@ -77,7 +83,9 @@ This repo owns *configs*; [`~/.rice`](https://github.com/piarn/.rice) owns
 the *styling* layer several of them include or symlink from — sway's
 colors/gaps/screen-layout, tmux/nvim/fish accents, and the
 yazi/lazygit/lazydocker/firefox/KDE-app theme files. `install.sh` clones
-it to `~/.rice` if it isn't already there, renders the current theme
+it to `~/.rice` over https if it isn't already there (pushes go over
+ssh), fast-forwards it when its branch has an upstream (a local-only
+branch is left alone), renders the current theme
 (`~/.rice/bin/apply-theme`), and — if sway is already running — applies
 whichever screen layout matches what's connected
 (`~/.rice/bin/apply-layout --auto`). Both are safe to re-run any time; see

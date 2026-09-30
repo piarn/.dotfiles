@@ -38,6 +38,9 @@ brightnessctl
 pulseaudio-utils
 neovim
 
+# lints the repo's shell scripts, same as CI (.github/workflows/lint.yml)
+ShellCheck
+
 # installer prerequisites
 curl
 stow
