@@ -1,3 +1,10 @@
 [user]
 	name = piarn
 	email = 102540190+piarn@users.noreply.github.com
+	signingkey = ~/.ssh/keys/github
+
+[commit]
+	gpgsign = true
+
+[tag]
+	gpgsign = true

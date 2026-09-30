@@ -3,6 +3,36 @@
 
 [core]
 	editor = nvim
+	# delta (packages.txt: git-delta): syntax-highlighted diffs, same
+	# theme as bat. `n`/`N` jump between files in a long diff. Falls back
+	# to plain less/cat on a machine where install.sh hasn't run yet.
+	pager = "command -v delta >/dev/null && exec delta || exec less"
+
+[interactive]
+	diffFilter = "command -v delta >/dev/null && exec delta --color-only || exec cat"
+
+[delta]
+	navigate = true
+	syntax-theme = gruvbox-dark
+
+[diff]
+	# histogram keeps moved/reordered blocks readable instead of
+	# interleaving unrelated lines; colorMoved marks pure moves.
+	algorithm = histogram
+	colorMoved = default
+
+[merge]
+	# conflict markers also show the common ancestor, minus the lines
+	# both sides agree on
+	conflictstyle = zdiff3
+
+[rerere]
+	# remember how a conflict was resolved and replay it next time
+	enabled = true
+
+[fetch]
+	# drop remote-tracking branches deleted upstream
+	prune = true
 
 [pull]
 	rebase = false
@@ -12,6 +42,15 @@
 
 [color]
 	ui = auto
+
+# Commits are signed with the ssh key from whichever identity file below
+# sets user.signingkey (and commit.gpgsign); allowed_signers lets
+# `git log --show-signature` verify them locally.
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	allowedSignersFile = ~/.config/git/allowed_signers
 
 [include]
 	path = ~/.gitconfig.identity.github
