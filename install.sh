@@ -525,6 +525,21 @@ install_pam_lock_config() {
     echo "$content" | sudo tee "$pam_file" >/dev/null
 }
 
+# GDM's Sway entry runs /usr/local/bin/sway-session (GPU selection, a log
+# GDM would otherwise discard, a safe-mode retry when sway dies at
+# startup); the .desktop override points GDM at it. System paths, so sudo;
+# only rewritten when they differ from the repo's.
+install_sway_session() {
+    local src dest
+    for src in sway-session:/usr/local/bin/sway-session:755 \
+               sway.desktop:/usr/local/share/wayland-sessions/sway.desktop:644; do
+        dest=${src#*:}; dest=${dest%:*}
+        cmp -s "$BOOTSTRAP_DIR/${src%%:*}" "$dest" && continue
+        echo "==> installing $dest"
+        sudo install -D -m "${src##*:}" "$BOOTSTRAP_DIR/${src%%:*}" "$dest"
+    done
+}
+
 # The KDE flatpaks (Dolphin, Gwenview, Ark) already read the host's
 # ~/.config/kdeglobals (stowed from ./kde, a symlink into ~/.rice), but
 # outside a Plasma session Qt never loads KDE's platform theme, so they
@@ -738,6 +753,12 @@ doctor() {
     fi
     fc-list 2>/dev/null | grep "Material Symbols Outlined" >/dev/null && ok "Material Symbols font" || bad "Material Symbols font missing"
     [ -f /etc/pam.d/quickshell-lock ] && ok "lock screen PAM service" || bad "/etc/pam.d/quickshell-lock missing (lock screen can't unlock)"
+    if cmp -s "$BOOTSTRAP_DIR/sway-session" /usr/local/bin/sway-session \
+        && cmp -s "$BOOTSTRAP_DIR/sway.desktop" /usr/local/share/wayland-sessions/sway.desktop; then
+        ok "sway-session (GDM entry)"
+    else
+        bad "/usr/local/bin/sway-session or its GDM entry differs from .bootstrap (run install.sh)"
+    fi
 
     echo "links"
     local fails_before=$fails
@@ -928,6 +949,7 @@ install_node
 install_rice
 install_material_symbols
 install_pam_lock_config
+install_sway_session
 install_yazi
 install_satty
 install_lazygit
