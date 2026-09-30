@@ -65,6 +65,17 @@ snapshot() {
     rm -rf "$good" && mv "$good.new" "$good"
 }
 
+# Whether the live config's files are what instance $1 loaded: none changed
+# after it started. Hot reload is off, so later edits (not loaded yet, maybe
+# broken) sit on disk, and a watchdog restarted meanwhile mustn't snapshot
+# them as known good.
+unchanged_since_start() {
+    # +1: date and etimes both round down, so this can come out a second
+    # early and flag a file written just before the start
+    started=$(($(date +%s) - $(ps -o etimes= -p "$1" | tr -d ' ') + 1))
+    [ -z "$(find -L "$live" -type f -newermt "@$started" -print -quit 2>/dev/null)" ]
+}
+
 nag() { swaymsg -q exec "swaynag -t warning -m \"$1\""; }
 
 fall_back() {
@@ -92,7 +103,7 @@ check_configs() {
         case $(config_state "$p") in
             loaded)
                 checked="$checked $p"
-                snapshot
+                unchanged_since_start "$p" && snapshot
                 if [ -n "$fallback" ]; then
                     logger -t qs-watchdog "live quickshell config loads again; stopping the last-good instance"
                     kill -KILL "$fallback"

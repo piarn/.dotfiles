@@ -68,6 +68,20 @@ check "loaded: live instance kept" alive "$p"
 check "loaded: snapshot refreshed" [ "$(cat "$QS_GOOD/shell.qml")" = "shell v3" ]
 kill "$p"
 
+# Loaded long ago, but the files changed on disk since (hot reload is
+# off): what's on disk isn't what loaded, so it isn't known good.
+: >"$CALLS"; checked=""
+echo "shell known-good" >"$TMP/src/shell.qml"; snapshot
+p=$(spawn x); log "$p" "INFO: Configuration Loaded"
+echo "shell unloaded edit" >"$TMP/src/shell.qml"; touch -d '+1 min' "$TMP/src/shell.qml"
+list_instances() { echo "$p"; }
+check_configs
+check "edited since load: snapshot not replaced" [ "$(cat "$QS_GOOD/shell.qml")" = "shell known-good" ]
+touch -d '-1 min' "$TMP/src/shell.qml"; checked=""
+check_configs
+check "unchanged since load: snapshot taken" [ "$(cat "$QS_GOOD/shell.qml")" = "shell unloaded edit" ]
+kill "$p"
+
 # failed with no snapshot yet: told so, nothing started
 : >"$CALLS"; checked=""; rm -rf "$QS_GOOD"
 p=$(spawn x); log "$p" "ERROR: Failed to load configuration"

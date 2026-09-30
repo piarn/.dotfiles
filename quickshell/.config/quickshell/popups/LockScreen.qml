@@ -185,7 +185,8 @@ Item {
         target: "lock"
         function lock(): void { sessionLock.locked = true }
         // dots-lock's proof the lock engaged (`qs ipc call` itself exits 0
-        // even when this target doesn't exist)
-        function isLocked(): bool { return sessionLock.locked }
+        // even when this target doesn't exist): secure, i.e. confirmed by
+        // the compositor, not just requested
+        function isLocked(): bool { return sessionLock.secure }
     }
 }
