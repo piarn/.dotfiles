@@ -43,57 +43,27 @@ output * bg ~/.rice/wallpaper.png fill
 # active profile.
 include ~/.rice/sway/outputs.conf
 #
-# Auto-switch the layout on dock/undock. `exec` only fires on sway's
-# initial startup, not on reload, so this needs `exec_always` — the
-# daemon takes an exclusive lock and exits immediately if another
-# instance already holds it, so this stays deduplicated across reloads.
-exec_always ~/.rice/bin/layout-watch
+# Session services — layout-watch (auto-switch the screen layout on
+# dock/undock), bluetooth-agent (pairing agent), the polkit agent (password
+# prompts for privileged actions), cliphist (clipboard history for $mod+v),
+# udiskie (USB automount), swayidle (lock after 10 minutes idle and before
+# any suspend/lid close, never suspend on its own) and qs-watchdog — run as
+# systemd user services under dots-session.target
+# (~/.config/systemd/user), so a crash gets them restarted and their logs
+# land in `journalctl --user -u <name>`.
 #
-# Register a bluetooth pairing agent for the whole session — nothing else
-# here does (no blueman/GNOME shell), so without this, bluetooth devices
-# pair but drop right after connecting (see the script for why).
-# exec_always is safe here too: the script exits immediately if one's
-# already running.
-exec_always ~/.local/bin/bluetooth-agent
-#
-# Screen sharing (Meet/Teams/Zoom in the browser): xdg-desktop-portal only
-# reads ~/.config/xdg-desktop-portal/sway-portals.conf, which routes
-# ScreenCast to the wlr backend, when XDG_CURRENT_DESKTOP is in the
-# systemd user environment, and /etc/sway/config.d doesn't export it. The
-# portal may already have started without it, hence the restart.
-exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway && systemctl --user restart xdg-desktop-portal
-#
-# Password prompts for privileged actions (NetworkManager/bluetooth
-# changes, pkexec, disk tools); without an agent they fail silently.
-exec /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
-#
-# Clipboard history for quickshell's picker ($mod+v): cliphist
-# stores every copy. Skipped until installed.
-exec sh -c 'command -v cliphist >/dev/null && exec wl-paste --watch cliphist store'
-#
-# Automount + notifications for USB drives (eject: `udiskie-umount -a`).
-# Skipped until installed.
-exec sh -c 'command -v udiskie >/dev/null && exec udiskie --no-tray'
-
-### Idle configuration
-#
-# Lock (never suspend) after 10 minutes idle — the lock alone protects
-# against someone walking up to an unattended session; an idle-triggered
-# suspend risks losing unsaved work if something goes wrong on resume, so
-# this deliberately doesn't do that (see also `output * power off`, left
-# out for the same reason: it's one more thing that can fail to come back).
-#
-# `before-sleep` covers both an explicit suspend and a lid close — logind's
-# default HandleLidSwitch=suspend routes a lid close through the same
-# PrepareForSleep signal swayidle listens for, so one hook covers both
-# without a separate lid-specific handler.
-#
-# Plain `exec` (not exec_always): swayidle should start once at sway's
-# initial startup and keep running across `$mod+Shift+c` reloads, not get a
-# second instance spawned on every reload the way exec_always would.
-exec swayidle -w \
-         timeout 600 '$qs ipc call lock lock' \
-         before-sleep '$qs ipc call lock lock'
+# Importing WAYLAND_DISPLAY/SWAYSOCK into the systemd user environment
+# first is what lets them reach this sway. It also makes screen sharing
+# (Meet/Teams/Zoom in the browser) work: xdg-desktop-portal only reads
+# ~/.config/xdg-desktop-portal/sway-portals.conf, which routes ScreenCast to
+# the wlr backend, when XDG_CURRENT_DESKTOP is in that environment, and the
+# portal may already have started without it, hence its restart. `restart`
+# (not `start`) on the target replaces services left over from a previous
+# sway that crashed before it could stop them.
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY SWAYSOCK I3SOCK DISPLAY XDG_CURRENT_DESKTOP=sway && (systemctl --user restart xdg-desktop-portal || true) && systemctl --user restart dots-session.target
+# ...and stop them when sway exits (Fedora's sway-systemd would do the
+# same for its own target, Debian/Arch have nothing that would).
+exec swaymsg -t subscribe '["shutdown"]' && systemctl --user stop dots-session.target
 
 ### Input configuration (`man 5 sway-input`)
 
@@ -294,8 +264,7 @@ bindsym $mod+r mode "resize"
 # one's already running, so `exec_always` (needed to survive `$mod+Shift+c`
 # reloads) doesn't pile up processes. qs-watchdog restarts it the same way.
 exec_always env QML2_IMPORT_PATH=$HOME/.rice $HOME/.local/bin/quickshell -n
-# Kills and restarts quickshell if it hangs (a frozen popup would otherwise
-# hold all input); see the comment atop the script.
-exec_always ~/.local/bin/qs-watchdog
+# qs-watchdog (restarts it if it hangs or crashes) runs from
+# dots-session.target, see the session services above.
 
 include /etc/sway/config.d/*

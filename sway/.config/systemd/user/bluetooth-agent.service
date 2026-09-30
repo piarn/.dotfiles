@@ -1,0 +1,10 @@
+[Unit]
+Description=Session bluetooth pairing agent
+PartOf=dots-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/bluetooth-agent
+Restart=on-failure
+RestartSec=2
+

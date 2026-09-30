@@ -1,0 +1,10 @@
+[Unit]
+Description=Lock the screen when idle and before sleep
+PartOf=dots-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=swayidle -w timeout 600 '%h/.local/bin/qs ipc call lock lock' before-sleep '%h/.local/bin/qs ipc call lock lock'
+Restart=on-failure
+RestartSec=2
+

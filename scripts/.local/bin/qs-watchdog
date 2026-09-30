@@ -16,7 +16,8 @@
 # two checks in a row find no process — `quickshell -n` makes that safe to
 # race with sway's own exec_always on reload.
 #
-# Started from sway with exec_always; the flock keeps it to one instance.
+# Runs as qs-watchdog.service under dots-session.target; the flock keeps it
+# to one instance.
 
 run="${XDG_RUNTIME_DIR:-/tmp}"
 heartbeat="$run/quickshell-heartbeat"
