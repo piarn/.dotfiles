@@ -16,7 +16,7 @@ with built-in fallbacks.
 
 ```tmux
 run '~/.config/tmux/plugins/tmux-sessionizer/sessionizer.tmux'   # or: set -g @plugin 'you/tmux-sessionizer'
-bind -T vim-normal M-s sessionizer
+bind -T vim-normal s sessionizer
 ```
 
 It registers a `sessionizer` command alias and binds nothing itself.

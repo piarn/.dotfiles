@@ -226,7 +226,7 @@ out=$(list | fzf \
     --delimiter='\t' --with-nth=1 --nth=1 \
     --layout=reverse --height=100% --border=none --no-scrollbar --padding=1,2 \
     --info=inline-right --prompt='❯ ' --pointer='▌' --ellipsis='…' \
-    --input-border=rounded --input-label=' filter · ^n creates ' \
+    --input-border=rounded --input-label=' filter · ^n creates (or prompts) ' \
     --list-border=none \
     --color="$colors" \
     --ansi --footer="$footer" --footer-border=none \
@@ -241,7 +241,12 @@ query=$(sed -n 1p <<<"$out")
 key=$(sed -n 2p <<<"$out")
 sel=$(sed -n 3p <<<"$out")
 
-if [ "$key" = ctrl-n ] && [ -n "$query" ]; then
+if [ "$key" = ctrl-n ]; then
+    # no query typed: ask for the name instead of silently doing nothing
+    if [ -z "$query" ]; then
+        read -r -e -p "  $(fg "$C_ACID")new session:$(printf '\033[0m') " query </dev/tty || exit 0
+    fi
+    [ -n "$query" ] || exit 0
     name=$(tr '.:' '__' <<<"$query")
     tmux has-session -t "=$name" 2>/dev/null || tmux new-session -ds "$name" -c "$HOME"
     target="=$name"

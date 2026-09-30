@@ -16,9 +16,9 @@ New clients always attach in NORMAL.
 
 | Mode | For | Entered by | Left by |
 | --- | --- | --- | --- |
-| NORMAL | running tmux commands | Escape (from INSERT), attach, leaving VISUAL | `<leader> i`, `<leader> v` |
+| NORMAL | running tmux commands | Escape (from INSERT), attach, leaving VISUAL | `<leader> i` (or `<leader> <leader>`) |
 | INSERT | typing into the shell; no tmux commands | `<leader> i` | Escape, `C-Space` |
-| VISUAL | selecting text and yanking it; no tmux commands | `<leader> v`, drag-select, wheel-scroll | Escape, `q`, `y` |
+| VISUAL | selecting text and yanking it; no tmux commands | `v` in NORMAL, drag-select, wheel-scroll | Escape, `q`, `y` |
 
 INSERT and VISUAL are never reachable from each other by keyboard — both exit
 to NORMAL first, exactly like vim. The mouse is the one exception: drag-select
@@ -71,7 +71,7 @@ NORMAL, after the leader:
 
 - `i` INSERT, `v` VISUAL
 - `d` detach, `r` reload config
-  (window, pane and session management is on the direct Alt chords in
+  (window, pane and session management is on the bare-key layer in
   `tmux.conf`, not here)
 - arrows, `o` and `;` move between panes as they do in stock tmux
 - everything tmux binds by default that is not listed above (`%`, `[`, `?`, `t`,
@@ -94,6 +94,7 @@ empty by default so a theme can own the colours.
 | `@vim-modes-visual-style` | `""` |
 | `@vim-modes-insert-style` | `""` |
 | `@vim-modes-escape-passthrough` | `"nvim vim"` |
+| `@vim-modes-escape-apps` | `""` (extra commands that get Escape; hjkl unaffected) |
 | `@vim-modes-leader` | read from `prefix` |
 | `@vim-modes-leader2` | read from `prefix2` |
 | `@vim-modes-auto-status` | `"on"` |

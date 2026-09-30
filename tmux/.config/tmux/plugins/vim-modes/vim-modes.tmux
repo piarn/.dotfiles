@@ -70,6 +70,14 @@ passthrough=$(tmux_option '@vim-modes-escape-passthrough' 'nvim vim')
 passthrough_re=$(printf '%s' "$passthrough" | tr -s ' ' '|')
 tmux set-option -g @vim-modes-vim-pane "#{m/r:^(${passthrough_re})$,#{pane_current_command}}"
 
+# Apps that want Escape for themselves but are not vim-navigator-aware (ssh into
+# a box running vi, TUIs with menus). Escape goes to them; C-Space is the way
+# back to NORMAL. Kept apart from the list above so NORMAL's hjkl still moves
+# tmux panes over these instead of sending them C-h/j/k/l.
+escape_apps=$(tmux_option '@vim-modes-escape-apps' '')
+esc_re=$(printf '%s %s' "$passthrough" "$escape_apps" | tr -s ' ' '|' | sed 's/^|//; s/|$//')
+tmux set-option -g @vim-modes-esc-pane "#{m/r:^(${esc_re})$,#{pane_current_command}}"
+
 # --- the leader ------------------------------------------------------------
 #
 # The leader is tmux's own prefix, whatever the user set it to, and its commands
