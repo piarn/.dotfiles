@@ -90,4 +90,13 @@ check_configs
 check "no snapshot: nothing started" not_called "-p $QS_GOOD"
 check "no snapshot: user told about dots-rescue" called "dots-rescue"
 
+# exited on a failed live config (never seen running): reported as such
+rm -rf "$QS_RUN/quickshell"
+log 101 "INFO: Launching config: \"$QS_LIVE/shell.qml\""$'\n'"ERROR: Failed to load configuration"
+check "exited live failure: found" [ "$(failed_live_exit)" = "$QS_RUN/quickshell/by-pid/101/log.log" ]
+sleep 1.1; log 102 "INFO: Launching config: \"$QS_GOOD/shell.qml\""$'\n'"ERROR: Failed to load configuration"
+check "newest was the snapshot: not a live failure" not failed_live_exit
+sleep 1.1; log 103 "INFO: Launching config: \"$QS_LIVE/shell.qml\""$'\n'"INFO: Configuration Loaded"
+check "newest loaded (then crashed): not a live failure" not failed_live_exit
+
 finish

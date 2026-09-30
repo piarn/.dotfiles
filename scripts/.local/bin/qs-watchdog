@@ -119,6 +119,17 @@ check_configs() {
     done
 }
 
+# The log of the newest instance, when it ran the live config and that
+# failed to load. Such an instance exits within a second, before
+# check_configs sees it running, so without this a broken live config
+# would just be restarted over and over.
+failed_live_exit() {
+    # shellcheck disable=SC2012  # by-pid names are pids
+    log=$(ls -t "$run"/quickshell/by-pid/*/log.log 2>/dev/null | head -1)
+    [ -n "$log" ] && grep -qF "Launching config: \"$live/shell.qml\"" "$log" \
+        && grep -q 'Failed to load configuration' "$log" && echo "$log"
+}
+
 restart() {
     sleep 1
     swaymsg -q exec "$start"
@@ -146,8 +157,12 @@ while sleep 3; do
         strikes=0
         missing=$((missing + 1))
         [ "$missing" -ge 2 ] || continue
-        logger -t qs-watchdog "quickshell not running (crashed?), restarting"
-        restart
+        if [ -f "$good/shell.qml" ] && log=$(failed_live_exit); then
+            fall_back "$log"
+        else
+            logger -t qs-watchdog "quickshell not running (crashed?), restarting"
+            restart
+        fi
         missing=0
         continue
     fi

@@ -97,8 +97,12 @@ Item {
         return Math.max(m, 0) + "m"
     }
 
+    // Always ticking (a Date every second is nothing): bound to
+    // sessionLock.locked it never started for the lock a fresh instance
+    // takes from lockFlag during startup, and that lock's clock stayed
+    // frozen at the startup minute.
     Timer {
-        running: sessionLock.locked
+        running: true
         repeat: true
         interval: 1000
         triggeredOnStart: true
