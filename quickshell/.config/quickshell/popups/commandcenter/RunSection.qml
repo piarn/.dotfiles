@@ -277,7 +277,7 @@ Item {
     // here to push a page onto, unlike the old hub.
     function toolActionRows() {
         return toolRows.filter(r => r.kind !== "header").map(it => it.kind === "page" ? Object.assign({}, it, {
-            kind: "action", run: () => root.openPopup(it.group === "clipboard" ? "clipboard" : "notifications"),
+            kind: "action", run: () => root.openPopup(it.group === "clipboard" ? "clipboard" : "calendar"),
         }) : it)
     }
 

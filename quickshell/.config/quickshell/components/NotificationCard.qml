@@ -1,5 +1,5 @@
 // One notification — used both for on-screen toasts and for rows in
-// NotificationCenter. Click the body to run the notification's default
+// CalendarMenu. Click the body to run the notification's default
 // action (or just hide the toast when it has none); [x] dismisses it
 // everywhere.
 import Quickshell

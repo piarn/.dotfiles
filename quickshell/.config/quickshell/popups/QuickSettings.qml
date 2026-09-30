@@ -1,13 +1,12 @@
 // Quick settings, opened from the ≡ at the end of the bar (or $mod+n) —
-// the bar's only widget, so this is the way into every other popup, which
-// then offers a ‹ back here. Parts:
+// the bar's only widget, so this is the way into every other popup but the
+// calendar (the clock's), which then offers a ‹ back here. Parts:
 //  - tray: the StatusNotifierItem icons apps register (Slack, nm-applet, …)
 //    — the bar has no tray of its own, like Windows' hidden-icons flyout.
 //    Left click activates (menu-only items open their menu), right click
 //    opens the menu, middle click is the secondary action, wheel scrolls.
-//  - the newest notifications, with [all] for the full list
 //  - toggles: network (what traffic goes over, VPNs included; click for
-//    the network popup), bluetooth, do not disturb, keep awake, night
+//    the network popup), bluetooth, keep awake, night
 //    light, power profile; the › on a tile opens that feature's full popup
 //    (bluetooth's is a section of the network popup)
 //  - volume/mic/brightness sliders (middle click mutes, wheel steps); the
@@ -157,47 +156,6 @@ BarPopup {
 
     Divider {}
 
-    // newest notifications — the rest behind [all]
-    Item {
-        visible: NotificationState.notifications.length > 0
-        width: parent.width
-        height: visible ? allBtn.implicitHeight : 0
-
-        MonoText {
-            anchors.left: parent.left
-            color: Colors.gray
-            text: "notifications · " + NotificationState.notifications.length
-        }
-        Row {
-            anchors.right: parent.right
-            spacing: 12
-
-            TextButton {
-                label: "clear all"
-                onClicked: NotificationState.clearAll()
-            }
-            TextButton {
-                id: allBtn
-                label: "all"
-                onClicked: menu.openPopup("notifications")
-            }
-        }
-    }
-
-    Repeater {
-        model: NotificationState.notifications.slice(-3).reverse()
-
-        delegate: NotificationCard {
-            required property var modelData
-            width: menu.innerWidth
-            notification: modelData
-        }
-    }
-
-    Divider {
-        visible: NotificationState.notifications.length > 0
-    }
-
     // toggles
     Grid {
         columns: 2
@@ -235,19 +193,6 @@ BarPopup {
             hasDetail: true
             onToggled: BluetoothState.togglePower()
             onDetail: menu.openPopup("network")
-        }
-
-        ToggleTile {
-            width: menu.tileWidth
-            icon: NotificationState.dnd ? "\u{e7f6}" : "\u{e7f5}"   // notifications_off / notifications
-            title: "Silence"
-            subtitle: [NotificationState.dnd ? "toasts hidden" : "off",
-                       NotificationState.notifications.length ? NotificationState.notifications.length + " unread" : ""]
-                .filter(s => s).join(" · ")
-            active: NotificationState.dnd
-            hasDetail: true
-            onToggled: NotificationState.toggleDnd()
-            onDetail: menu.openPopup("notifications")
         }
 
         ToggleTile {

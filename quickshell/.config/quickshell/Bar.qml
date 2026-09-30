@@ -1,7 +1,8 @@
 // Status bar, replacing waybar. One PanelWindow per screen (Variants), with
-// sway workspaces on the left (styled like tmux's window list), a clock
-// centered, and a single ≡ quick settings button on the right (plus a recording indicator while
-// screenrec runs). Popups open on this bar's own screen. Colors from the rice theme via the Colors
+// sway workspaces on the left (styled like tmux's window list), the clock
+// and weather centered (click: calendar + notifications, with a dot while
+// any are unread), and a single ≡ quick settings button on the right (plus
+// a recording indicator while screenrec runs). Popups open on this bar's own screen. Colors from the rice theme via the Colors
 // singleton.
 import Quickshell
 import Quickshell.I3
@@ -107,6 +108,13 @@ Variants {
             width: clockRow.implicitWidth + 20
             height: bar.pillHeight
 
+            // the calendar and notifications (popups/CalendarMenu.qml)
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: PopupState.toggle("calendar", bar.modelData)
+            }
+
             Row {
                 id: clockRow
                 anchors.centerIn: parent
@@ -127,6 +135,16 @@ Variants {
                         repeat: true
                         onTriggered: clock.text = Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
                     }
+                }
+
+                // unread notifications, which live in the calendar popup
+                Text {
+                    visible: NotificationState.notifications.length > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: "monospace"
+                    font.pixelSize: 11
+                    color: Colors.acid
+                    text: "●"
                 }
 
                 // current weather (state/WeatherState.qml), gone when stale
@@ -207,11 +225,11 @@ Variants {
                 }
 
                 // The only widget: quick settings, which holds everything else
-                // (network, bluetooth, notifications, battery, tray; each tile's
-                // › opens that feature's full popup). The icon only carries what
-                // needs attention: red when offline, on very weak wi-fi or a
-                // nearly empty battery; amber when merely weak/low or a tray app
-                // wants attention; a dot while there are unread notifications.
+                // but notifications (network, bluetooth, battery, tray; each
+                // tile's › opens that feature's full popup). The icon only
+                // carries what needs attention: red when offline, on very weak
+                // wi-fi or a nearly empty battery; amber when merely weak/low or
+                // a tray app wants attention.
                 BarWidget {
                     readonly property real pct: UPower.displayDevice.percentage * 100
                     readonly property bool onBattery: UPower.displayDevice.isLaptopBattery
@@ -231,8 +249,6 @@ Variants {
                             return Colors.amber
                         return Colors.acid
                     }
-                    showDot: NotificationState.notifications.length > 0
-                    dotFilled: true
                 }
             }
         }

@@ -28,18 +28,20 @@ ShellRoot {
     ClipboardMenu {}
     NetworkMenu {}
     BatteryMenu {}
-    NotificationCenter {}
+    CalendarMenu {}
     QuickSettings {}
     NotificationToasts {}
     Osd {}
     LockScreen {}
 
     // `qs ipc call popup toggle <name>` — quicksettings ($mod+n), network,
-    // battery, notifications. Opens on the focused monitor. "bluetooth"
-    // still works: it's a section of the network popup now.
+    // battery, calendar. Opens on the focused monitor. "bluetooth" and
+    // "notifications" still work: they're sections of network and calendar.
     IpcHandler {
         target: "popup"
-        function toggle(name: string): void { PopupState.toggle(name === "bluetooth" ? "network" : name) }
+        function toggle(name: string): void {
+            PopupState.toggle({ bluetooth: "network", notifications: "calendar" }[name] || name)
+        }
         function close(): void { PopupState.close() }
     }
 

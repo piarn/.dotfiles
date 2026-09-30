@@ -48,7 +48,7 @@ Item {
         { kind: "action", group: "notifications", key: "tool:notifications", title: "notification history",
           glyph: "\u{e7f5}", aliases: "notifications unread",
           subtitle: () => NotificationState.notifications.length + " unread",
-          run: () => root.openPopup("notifications") },
+          run: () => root.openPopup("calendar") },
         { kind: "toggle", group: "notifications", key: "tool:silence", title: "silence",
           glyph: "\u{e7f6}", aliases: "dnd do not disturb quiet",
           on: () => NotificationState.dnd, subtitle: () => NotificationState.dnd ? "toasts hidden" : "off",

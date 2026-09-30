@@ -32,6 +32,9 @@ PanelWindow {
     id: root
 
     property bool centered: false
+    // Bar popup opened from the middle of the bar (the calendar): under it,
+    // horizontally centered, instead of at the top-right corner.
+    property bool topCenter: false
     // Centered popups (CommandCenter, ClipboardMenu) never anchor to a
     // bar widget's own screen, so without this they always land on
     // whichever output Quickshell treats as first — not necessarily the
@@ -69,9 +72,9 @@ PanelWindow {
     exclusionMode: centered ? ExclusionMode.Ignore : ExclusionMode.Normal
     color: "transparent"
     anchors.top: !centered
-    anchors.right: !centered
+    anchors.right: !centered && !topCenter
     margins.top: centered ? 0 : 6
-    margins.right: centered ? 0 : 10
+    margins.right: centered || topCenter ? 0 : 10
     implicitWidth: cardWidth
     implicitHeight: cardHeight
 

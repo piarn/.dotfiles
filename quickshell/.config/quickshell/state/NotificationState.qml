@@ -6,7 +6,7 @@
 // which needs the generic "data" default property Item has and QtObject
 // doesn't.
 //
-// Every notification is tracked (listed in NotificationCenter until
+// Every notification is tracked (listed in the calendar popup until
 // dismissed); `popups` is the subset currently shown as on-screen toasts
 // (popups/NotificationToasts.qml), each with its own countdown that pauses
 // while the pointer is over the toasts or a bar popup covers them. `dnd`
@@ -30,7 +30,7 @@ Item {
     // Plain property, updated imperatively (see the Connections block below)
     // rather than a live `notifications: server.trackedNotifications.values`
     // binding — that computed form was observed to read back as `undefined`
-    // everywhere it was used (Bar.qml, NotificationCenter.qml), for reasons
+    // everywhere it was used (Bar.qml, the old NotificationCenter.qml), for reasons
     // that didn't reproduce in an isolated single-file harness; this sidesteps
     // whatever binding-evaluation-order quirk that was rather than chase it
     // further.
