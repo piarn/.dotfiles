@@ -53,14 +53,42 @@ prune_dirs() {
 }
 
 # Same as sway's $mod+Shift+c: quickshell only scans for extras at
-# startup, and the watchdog/exec_always bring it straight back.
+# startup, and the watchdog/exec_always bring it straight back. Only for
+# extras that actually add quickshell code.
 restart_quickshell() {
-    [ -d "$EXTRAS_DIR/$1/home" ] || return 0
+    [ -d "$EXTRAS_DIR/$1/home/.config/quickshell" ] || return 0
     if pgrep -x quickshell >/dev/null && swaymsg -t get_version >/dev/null 2>&1; then
         echo "==> restarting quickshell"
         pkill -KILL -x quickshell || true
         swaymsg -q reload
     fi
+}
+
+# systemd timers an extra ships (home/.config/systemd/user/*.timer, e.g.
+# backup's) are enabled once they're linked in, and disabled before they're
+# unlinked so systemd isn't left with a dangling timers.target.wants link.
+extra_timers() {
+    local t
+    for t in "$EXTRAS_DIR/$1"/home/.config/systemd/user/*.timer; do
+        [ -e "$t" ] && basename "$t"
+    done
+}
+
+enable_timers() {
+    local timers
+    timers=$(extra_timers "$1")
+    [ -n "$timers" ] || return 0
+    systemctl --user daemon-reload
+    # shellcheck disable=SC2086
+    systemctl --user enable --now $timers
+}
+
+disable_timers() {
+    local timers
+    timers=$(extra_timers "$1")
+    [ -n "$timers" ] || return 0
+    # shellcheck disable=SC2086
+    systemctl --user disable --now $timers || true
 }
 
 case "${1:-list}" in
@@ -78,12 +106,14 @@ case "${1:-list}" in
         fi
         echo "==> stowing $name"
         stow_extra "$name" -R
+        enable_timers "$name"
         is_enabled "$name" || echo "$name" >>"$ENABLED_FILE"
         restart_quickshell "$name"
         ;;
     disable)
         require_extra "${2:-}"
         name="$2"
+        disable_timers "$name"
         echo "==> unstowing $name"
         stow_extra "$name" -D
         prune_dirs "$name"
