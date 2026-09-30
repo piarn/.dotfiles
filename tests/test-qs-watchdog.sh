@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # checked is read by the sourced qs-watchdog
 . "$(dirname "$0")/lib.sh"
 
 stub swaymsg 'echo "swaymsg $*" >>"$CALLS"'

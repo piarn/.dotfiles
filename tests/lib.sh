@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # BIN etc. are used by the tests sourcing this
 # Sourced by tests/test-*.sh. Stubs go first on PATH so a test never
 # reaches the live session's quickshell, sway or lockers.
 set -u

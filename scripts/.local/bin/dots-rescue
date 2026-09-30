@@ -20,9 +20,11 @@ usage() {
     exit 1
 }
 
-# sway-ipc.<uid>.<pid>.sock, newest first, skipping ones whose sway is gone
+# sway-ipc.<uid>.<pid>.sock whose sway is still running (earlier sessions
+# leave theirs behind)
 find_sway() {
-    for sock in $(ls -t "$rundir"/sway-ipc.*.sock 2>/dev/null); do
+    for sock in "$rundir"/sway-ipc.*.sock; do
+        [ -e "$sock" ] || continue
         pid=${sock%.sock}
         pid=${pid##*.}
         kill -0 "$pid" 2>/dev/null && { echo "$sock"; return 0; }

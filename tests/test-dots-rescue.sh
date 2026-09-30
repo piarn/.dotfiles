@@ -11,7 +11,8 @@ touch "$QS_GOOD/shell.qml"
 # a live "sway" (a real process) with an older socket, a dead one newer
 sleep 30 & live=$!
 touch -d '-2 min' "$DOTS_RESCUE_RUNDIR/sway-ipc.$(id -u).$live.sock"
-touch "$DOTS_RESCUE_RUNDIR/sway-ipc.$(id -u).999999.sock"
+# sorts before any live pid, so the glob reaches it first
+touch "$DOTS_RESCUE_RUNDIR/sway-ipc.$(id -u).0999999.sock"
 
 "$R" sway-reload
 check "stale sockets skipped: the live sway's used" called "SWAYSOCK=$DOTS_RESCUE_RUNDIR/sway-ipc.$(id -u).$live.sock reload"
