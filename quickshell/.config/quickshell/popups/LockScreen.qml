@@ -8,10 +8,10 @@
 // install_pam_lock_config — see that file for why it's a separate service
 // rather than reusing swaylock's or login's).
 //
-// Triggered by `qs ipc call lock lock` — sway's $mod+Escape bind, and the
-// command center's `:lock` session action, both just shell out to that
-// same IPC call rather than referencing this file directly, same loose
-// coupling as the command center's own toggles. Deliberately no
+// Triggered by `qs ipc call lock lock`, always through ~/.local/bin/dots-lock
+// ($mod+Escape, swayidle, the command center's `:lock`, qs-watchdog), which
+// confirms the lock with isLocked() below and falls back to swaylock when
+// this lock screen doesn't come up. Deliberately no
 // Escape-to-dismiss keybinding anywhere in this file: unlike the command
 // center, this is a security surface, so the only way out is a correct
 // password.
@@ -184,5 +184,8 @@ Item {
     IpcHandler {
         target: "lock"
         function lock(): void { sessionLock.locked = true }
+        // dots-lock's proof the lock engaged (`qs ipc call` itself exits 0
+        // even when this target doesn't exist)
+        function isLocked(): bool { return sessionLock.locked }
     }
 }

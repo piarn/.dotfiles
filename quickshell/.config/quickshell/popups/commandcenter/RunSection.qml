@@ -293,7 +293,7 @@ Item {
 
     readonly property var sessionActions: [
         { title: "lock", glyph: "\u{e899}", aliases: "screen",
-          cmd: ["qs", "ipc", "call", "lock", "lock"] },
+          cmd: [Quickshell.env("HOME") + "/.local/bin/dots-lock"] },
         { title: "reload", glyph: "\u{e5d5}", aliases: "restart refresh sway quickshell tmux kitty config",
           cmd: [Quickshell.env("HOME") + "/.local/bin/dots-reload"] },
         { title: "suspend", glyph: "\u{f159}", aliases: "sleep",

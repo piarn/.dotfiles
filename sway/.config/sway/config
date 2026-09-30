@@ -123,7 +123,7 @@ input "type:keyboard" {
     # Lock the screen — quickshell's own session-lock surface (Toxic-themed,
     # blurred screenshot background), see
     # ~/.dots/quickshell/.config/quickshell/popups/LockScreen.qml
-    bindsym $mod+Escape exec $qs ipc call lock lock
+    bindsym $mod+Escape exec ~/.local/bin/dots-lock
 
     # The command center's `:` session mode (lock/reload/suspend/logout/
     # reboot/shutdown) — the deliberate next step up from the direct lock

@@ -34,6 +34,7 @@ udiskie
 slurp
 wl-clipboard
 swayidle
+swaylock
 brightnessctl
 pulseaudio-utils
 neovim
