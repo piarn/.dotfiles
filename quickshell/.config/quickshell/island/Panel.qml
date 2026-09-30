@@ -65,6 +65,7 @@ FocusScope {
 
         // system │ calendar │ notifications 3 │ …, the open one inverted
         Row {
+            anchors.horizontalCenter: parent.horizontalCenter
             spacing: 0
 
             Repeater {
