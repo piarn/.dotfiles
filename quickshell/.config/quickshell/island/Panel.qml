@@ -63,40 +63,48 @@ FocusScope {
         width: parent.width
         spacing: 10
 
-        // system │ calendar │ notifications 3 │ …, the open one inverted
-        Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 0
+        // one square per tab, the open one filled like the focused
+        // workspace in the strip; the name (of the hovered tab, else the
+        // open one) beside them
+        Item {
+            width: parent.width
+            height: 24
 
-            Repeater {
-                model: Routes.TABS
+            Row {
+                id: tabRow
+                // the icons alone are centered, so they never shift as the name
+                // beside them changes length
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 2
 
-                delegate: Row {
-                    required property string modelData
-                    required property int index
-                    readonly property bool open: IslandState.tab === modelData
+                property string hovered: ""
 
-                    MonoText {
-                        visible: index > 0
-                        anchors.verticalCenter: parent.verticalCenter
-                        leftPadding: 2
-                        rightPadding: 2
-                        color: Colors.dim
-                        text: "│"
-                    }
+                Repeater {
+                    model: Routes.TABS
 
-                    Rectangle {
-                        width: label.implicitWidth + 10
-                        height: 20
-                        color: open ? Colors.neon : "transparent"
+                    delegate: Rectangle {
+                        required property string modelData
+                        readonly property bool open: IslandState.tab === modelData
+                        readonly property var glyphs: ({
+                            system: "\u{e429}",          // tune
+                            calendar: "\u{ebcc}",        // calendar_month
+                            notifications: "\u{e7f4}",   // notifications
+                            network: "\u{e63e}",         // wifi
+                            themes: "\u{e3b7}",          // palette
+                            run: "\u{e8b6}",             // search
+                            clipboard: "\u{e14f}"        // content_paste
+                        })
+                        width: 24
+                        height: 24
+                        color: open ? Colors.neon : tabMouse.containsMouse ? Colors.surface : "transparent"
 
-                        MonoText {
-                            id: label
+                        Icon {
                             anchors.centerIn: parent
-                            font.bold: open
-                            color: open ? Colors.black : tabMouse.containsMouse ? Colors.fg : Colors.gray2
-                            text: modelData === "notifications" && NotificationState.notifications.length
-                                ? modelData + " " + NotificationState.notifications.length : modelData
+                            font.pixelSize: 16
+                            color: parent.open ? Colors.black
+                                : modelData === "notifications" && NotificationState.notifications.length ? Colors.acid
+                                : tabMouse.containsMouse ? Colors.fg : Colors.gray2
+                            text: parent.glyphs[modelData]
                         }
 
                         MouseArea {
@@ -104,9 +112,23 @@ FocusScope {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            onContainsMouseChanged: tabRow.hovered = containsMouse ? modelData : (tabRow.hovered === modelData ? "" : tabRow.hovered)
                             onClicked: IslandState.open(modelData, IslandState.screen)
                         }
                     }
+                }
+
+            }
+
+            MonoText {
+                anchors.left: tabRow.right
+                anchors.verticalCenter: tabRow.verticalCenter
+                leftPadding: 10
+                color: tabRow.hovered ? Colors.fg : Colors.gray2
+                text: {
+                    const t = tabRow.hovered || IslandState.tab
+                    return t === "notifications" && NotificationState.notifications.length
+                        ? t + " · " + NotificationState.notifications.length : t
                 }
             }
         }
