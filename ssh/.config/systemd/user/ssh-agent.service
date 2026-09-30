@@ -1,0 +1,20 @@
+# The one ssh-agent for the whole login, at the socket environment.d/
+# ssh-agent.conf points SSH_AUTH_SOCK at, so sway, tmux and every shell
+# share it (instead of a `eval $(ssh-agent)` per shell, each with its own
+# keys). Runs for as long as the user manager does, not just the sway
+# session. Replaces the distro's socket-activated unit of the same name,
+# which only Fedora ships and whose activation relies on a Fedora patch.
+[Unit]
+Description=OpenSSH key agent
+Documentation=man:ssh-agent(1)
+
+[Service]
+# a socket left behind by a killed agent makes the bind fail
+ExecStartPre=/usr/bin/rm -f %t/ssh-agent.socket
+ExecStart=/usr/bin/ssh-agent -D -a %t/ssh-agent.socket
+# what ssh-agent exits with on SIGTERM
+SuccessExitStatus=2
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
