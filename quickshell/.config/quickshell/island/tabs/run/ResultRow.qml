@@ -7,6 +7,7 @@
 //   level   0..1 bar: set(v), adjust(d); Enter/run mutes
 //   page    Enter opens item.rows()       info    read-only
 //   theme   a rice theme with wallpaper + palette preview
+// Any row can carry `swatch` (a colour) in place of its icon/glyph.
 //   status  the home screen's live status line (text), never selected
 //   chips   a row of quick toggles (chips: [{title, on, run}]); ←→ pick
 //           one when the row is selected, Enter or a click flips it
@@ -154,9 +155,19 @@ Rectangle {
             visible: !!row.item.icon
             source: row.item.icon ? Quickshell.iconPath(row.item.icon, "application-x-executable") : ""
         }
+        // a colour entry (clipboard): the colour itself
+        Rectangle {
+            anchors.centerIn: parent
+            visible: !!row.item.swatch
+            width: 18
+            height: 18
+            color: row.item.swatch || "transparent"
+            border.width: Style.border
+            border.color: Colors.dim
+        }
         Icon {
             anchors.centerIn: parent
-            visible: !row.item.icon && row.kind !== "theme"
+            visible: !row.item.icon && !row.item.swatch && row.kind !== "theme"
             font.pixelSize: 18
             color: row.on || row.current ? Colors.neon : Colors.gray2
             text: row.v(row.item.glyph) || ""

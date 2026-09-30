@@ -39,9 +39,14 @@ Item {
     property bool popupsHovered: false
     // notification id -> ms left on screen (Infinity for critical)
     property var remaining: ({})
+    // notification id -> when it first showed up (ms), for "3m" in the tab
+    property var arrived: ({})
 
     function refresh() {
         notifications = server.trackedNotifications ? server.trackedNotifications.values.slice() : []
+        const a = {}
+        for (const n of notifications) a[n.id] = arrived[n.id] !== undefined ? arrived[n.id] : Date.now()
+        arrived = a
         // Drop toasts whose notification was closed by its app or dismissed
         // from the center.
         const live = popups.filter(n => notifications.includes(n))

@@ -30,7 +30,8 @@ GEO_URL = os.environ.get("DOTS_WEATHER_GEO_URL",
                          "https://geocoding-api.open-meteo.com/v1/search?count=1&name={city}")
 FORECAST_URL = os.environ.get("DOTS_WEATHER_FORECAST_URL",
                               "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
-                              "&current=temperature_2m,weather_code,is_day")
+                              "&current=temperature_2m,weather_code,is_day"
+                              "&daily=sunrise,sunset&timezone=auto&forecast_days=1")
 
 # Material Symbols (the shell's icon font) codepoints, read from the font's
 # ligatures rather than guessed.
@@ -120,7 +121,8 @@ def main() -> None:
         return
     loc = location(city)
     try:
-        current = fetch(FORECAST_URL.format(lat=loc["lat"], lon=loc["lon"]))["current"]
+        forecast = fetch(FORECAST_URL.format(lat=loc["lat"], lon=loc["lon"]))
+        current = forecast["current"]
     except (OSError, ValueError, KeyError) as e:
         sys.exit(f"dots-weather: forecast fetch failed ({e}); keeping the last one")
     code = int(current["weather_code"])
@@ -131,6 +133,9 @@ def main() -> None:
         "code": code,
         "desc": desc,
         "glyph": day if current.get("is_day", 1) else night,
+        # local times ("2026-09-30T07:12"), for the calendar tab
+        "sunrise": (forecast.get("daily", {}).get("sunrise") or [""])[0],
+        "sunset": (forecast.get("daily", {}).get("sunset") or [""])[0],
         "updated": int(time.time()),
     })
 

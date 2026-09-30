@@ -1,13 +1,16 @@
 // The island's calendar tab (click the clock): a month grid with ISO week
 // numbers, Monday first (the math is in island/calendar.js): ‹ › or the
-// scroll wheel change month, the title jumps back to today, and it always
-// opens on the current month. The current weather sits under the grid.
+// scroll wheel change month, [today] jumps back, and it always opens on
+// the current month. Under the grid, rows like the network tab's: the
+// weather, sunrise → sunset (state/WeatherState.qml, from dots-weather),
+// and how far through the year today is.
 import QtQuick
 import quickshell
 import "../../state"
 import "../../components"
 import ".."
 import "../calendar.js" as Cal
+import "../format.js" as Fmt
 
 Tab {
     id: menu
@@ -44,38 +47,15 @@ Tab {
         onTriggered: menu.today = new Date()
     }
 
-    // ‹ september 2026 ›
-    Item {
-        width: parent.width
-        height: title.implicitHeight
+    // september 2026 · week 40            [‹] [today] [›]
+    SectionHeader {
+        title: Cal.monthName(menu.month) + " " + menu.year
+        count: menu.year === menu.today.getFullYear() && menu.month === menu.today.getMonth()
+            ? "week " + Cal.isoWeek(menu.today).week : ""
 
-        TextButton {
-            anchors.left: parent.left
-            label: "‹"
-            onClicked: menu.shift(-1)
-        }
-        MonoText {
-            id: title
-            anchors.horizontalCenter: parent.horizontalCenter
-            font.pixelSize: 13
-            font.bold: true
-            color: titleMouse.containsMouse ? Colors.fg : Colors.neon
-            text: Cal.monthName(menu.month) + " " + menu.year
-
-            MouseArea {
-                id: titleMouse
-                anchors.fill: parent
-                anchors.margins: -4
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: menu.goToday()
-            }
-        }
-        TextButton {
-            anchors.right: parent.right
-            label: "›"
-            onClicked: menu.shift(1)
-        }
+        TextButton { label: "‹"; onClicked: menu.shift(-1) }
+        TextButton { label: "today"; onClicked: menu.goToday() }
+        TextButton { label: "›"; onClicked: menu.shift(1) }
     }
 
     // week column + seven days, six rows (height never changes between months)
@@ -142,29 +122,53 @@ Tab {
         }
     }
 
-    MonoText {
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: Colors.gray2
-        text: Qt.formatDate(menu.today, "dddd").toLowerCase()
-            + " · week " + Cal.isoWeek(menu.today).week
-            + " · day " + Cal.dayOfYear(menu.today)
-    }
+    Divider {}
 
-    // current weather (state/WeatherState.qml), gone when stale
-    Row {
-        visible: WeatherState.available
-        anchors.horizontalCenter: parent.horizontalCenter
-        spacing: 6
+    // today, as rows like the network tab's: weather, the sun, the year
+    component InfoRow: Item {
+        property alias glyph: glyphIcon.text
+        property alias title: titleText.text
+        property alias subtitle: subText.text
+        width: parent ? parent.width : 0
+        height: 30
 
         Icon {
+            id: glyphIcon
+            x: 10
             anchors.verticalCenter: parent.verticalCenter
+            font.pixelSize: 18
             color: Colors.gray2
-            text: WeatherState.glyph
         }
         MonoText {
+            id: titleText
+            x: 40
             anchors.verticalCenter: parent.verticalCenter
-            color: Colors.gray2
-            text: WeatherState.temp + " " + WeatherState.desc + (WeatherState.data ? " · " + WeatherState.data.city.toLowerCase() : "")
+            color: Colors.fg
         }
+        MonoText {
+            id: subText
+            anchors.left: titleText.right
+            anchors.leftMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            color: Colors.gray
+        }
+    }
+
+    InfoRow {
+        visible: WeatherState.available
+        glyph: WeatherState.glyph
+        title: WeatherState.temp + " " + WeatherState.desc
+        subtitle: WeatherState.data && WeatherState.data.city ? WeatherState.data.city.toLowerCase() : ""
+    }
+    InfoRow {
+        visible: WeatherState.sunrise !== "" && WeatherState.sunset !== ""
+        glyph: "\u{e1c6}"   // wb_twilight
+        title: Fmt.hhmm(WeatherState.sunrise) + " → " + Fmt.hhmm(WeatherState.sunset)
+        subtitle: visible ? Fmt.daylight(WeatherState.sunrise, WeatherState.sunset) + " of daylight" : ""
+    }
+    InfoRow {
+        glyph: "\u{ea5c}"   // hourglass_bottom
+        title: Qt.formatDate(menu.today, "dddd").toLowerCase() + " · day " + Cal.dayOfYear(menu.today)
+        subtitle: Fmt.yearProgress(menu.today) + "% of " + menu.today.getFullYear()
     }
 }

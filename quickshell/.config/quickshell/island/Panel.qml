@@ -39,6 +39,10 @@ FocusScope {
         id: keys
         focus: true
         Keys.onPressed: (event) => {
+            if (panel.current && panel.current.handleKey(event)) {
+                event.accepted = true
+                return
+            }
             if (event.key === Qt.Key_H || event.key === Qt.Key_Left) IslandState.step(-1)
             else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) IslandState.step(1)
             else if (event.key === Qt.Key_Escape) IslandState.close()

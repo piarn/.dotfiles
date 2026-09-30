@@ -1,99 +1,78 @@
-// The island's themes tab: every ~/.rice theme as a card — its wallpaper,
-// name and palette — with the current one outlined in the accent. Click to
-// switch (~/.rice/bin/apply-theme re-renders every app's theme and restarts
-// quickshell, so the island comes back collapsed in the new colours).
-// Same list as the run tab's `:theme` mode (state/RiceState.qml).
+// The island's themes tab: every ~/.rice theme as a row like the run tab's
+// `:theme` results (run/ResultRow, kind "theme"): wallpaper thumbnail, name
+// and palette, the current one marked ●. ↑/↓ or j/k select (it opens on the
+// current theme), Enter or a click applies it — ~/.rice/bin/apply-theme
+// re-renders every app's theme and restarts quickshell, so the island
+// comes back collapsed in the new colours. Same list as `:theme`
+// (state/RiceState.qml).
 import QtQuick
 import quickshell
 import "../../state"
 import "../../components"
 import ".."
+import "run"
 
 Tab {
     id: menu
     name: "themes"
+    spacing: 8
 
-    readonly property int columns: 3
-    readonly property int cardWidth: (width - (columns - 1) * Style.gap) / columns
-    // the palette roles worth showing, in the theme files' own order
-    readonly property var swatches: ["neon", "acid", "red", "amber", "blue", "magenta", "cyan", "fg"]
+    property int selected: 0
 
-    onOpened: RiceState.refresh()
-
-    MonoText {
-        color: Colors.gray
-        text: "themes · " + RiceState.themes.length
+    function selectCurrent() {
+        selected = Math.max(0, RiceState.themes.findIndex(t => t.id === RiceState.currentTheme))
+    }
+    function apply(t) {
+        if (t.id !== RiceState.currentTheme) RiceState.applyTheme(t.id)
     }
 
-    Grid {
-        columns: menu.columns
-        spacing: Style.gap
+    onOpened: {
+        RiceState.refresh()
+        selectCurrent()
+    }
+    Connections {
+        target: RiceState
+        function onThemesChanged() { menu.selectCurrent() }
+    }
+
+    function handleKey(event) {
+        const n = RiceState.themes.length
+        if (!n) return false
+        if (event.key === Qt.Key_Down || event.key === Qt.Key_J) selected = Math.min(n - 1, selected + 1)
+        else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) selected = Math.max(0, selected - 1)
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) apply(RiceState.themes[selected])
+        else return false
+        return true
+    }
+
+    SectionHeader {
+        title: "themes"
+        count: String(RiceState.themes.length)
+    }
+
+    Column {
+        width: menu.width
+        spacing: 2
 
         Repeater {
             model: RiceState.themes
 
-            delegate: Rectangle {
-                id: card
+            delegate: ResultRow {
                 required property var modelData
-                readonly property bool current: modelData.id === RiceState.currentTheme
-
-                width: menu.cardWidth
-                height: preview.height + info.implicitHeight + 16
-                color: modelData.colors.black || Colors.black
-                border.width: current ? 2 : Style.border
-                border.color: current ? Colors.neon : cardMouse.containsMouse ? Colors.fg : Colors.dim
-
-                Image {
-                    id: preview
-                    x: card.border.width
-                    y: card.border.width
-                    width: parent.width - 2 * card.border.width
-                    height: 90
-                    source: modelData.wallpaper ? "file://" + modelData.wallpaper : ""
-                    sourceSize.width: width * 2
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    clip: true
-                }
-
-                Column {
-                    id: info
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: preview.bottom
-                    anchors.margins: 8
-                    spacing: 6
-
-                    MonoText {
-                        width: parent.width
-                        elide: Text.ElideRight
-                        font.bold: card.current
-                        color: modelData.colors.fg || Colors.fg
-                        text: modelData.name + (card.current ? "  ●" : "")
-                    }
-
-                    Row {
-                        spacing: 2
-                        Repeater {
-                            model: menu.swatches
-                            Rectangle {
-                                required property string modelData
-                                width: 14
-                                height: 8
-                                color: card.modelData.colors[modelData] || "transparent"
-                            }
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: cardMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: card.current ? Qt.ArrowCursor : Qt.PointingHandCursor
-                    onClicked: if (!card.current) RiceState.applyTheme(card.modelData.id)
-                }
+                required property int index
+                readonly property bool isCurrent: modelData.id === RiceState.currentTheme
+                width: menu.width
+                item: ({ kind: "theme", title: modelData.name, colors: modelData.colors, wallpaper: modelData.wallpaper,
+                         subtitle: isCurrent ? "current theme" : "", on: isCurrent })
+                current: index === menu.selected
+                onClicked: menu.apply(modelData)
             }
         }
+    }
+
+    MonoText {
+        font.pixelSize: 11
+        color: Colors.gray2
+        text: "↑↓/jk select · enter or click applies"
     }
 }

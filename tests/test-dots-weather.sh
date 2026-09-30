@@ -6,7 +6,7 @@ W=$BIN/dots-weather
 export DOTS_WEATHER_CONF=$TMP/weather.conf DOTS_WEATHER_CACHE=$TMP/cache/weather.json
 export DOTS_WEATHER_GEO_URL="file://$TMP/geo.json" DOTS_WEATHER_FORECAST_URL="file://$TMP/forecast.json"
 echo '{"results":[{"name":"Vilnius","latitude":54.69,"longitude":25.28,"country":"Lithuania"}]}' >"$TMP/geo.json"
-forecast() { printf '{"current":{"temperature_2m":%s,"weather_code":%s,"is_day":%s}}\n' "$1" "$2" "$3" >"$TMP/forecast.json"; }
+forecast() { printf '{"current":{"temperature_2m":%s,"weather_code":%s,"is_day":%s},"daily":{"sunrise":["2026-09-30T07:12"],"sunset":["2026-09-30T19:03"]}}\n' "$1" "$2" "$3" >"$TMP/forecast.json"; }
 field() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$DOTS_WEATHER_CACHE" "$1"; }
 is() { [ "$(field "$1")" = "$2" ]; }
 
@@ -22,6 +22,8 @@ check "overcast: description" is desc overcast
 check "overcast: cloud glyph" is glyph $''
 check "city recorded" is city Vilnius
 check "update time recorded" [ "$(field updated)" -gt 1700000000 ]
+check "sunrise recorded" is sunrise "2026-09-30T07:12"
+check "sunset recorded" is sunset "2026-09-30T19:03"
 
 forecast 3.4 0 0; "$W"
 check "clear at night: moon glyph" is glyph $''

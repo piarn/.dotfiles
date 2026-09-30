@@ -18,6 +18,10 @@ Column {
 
     signal opened()
 
+    // Keys while the island itself has focus (no text field): a tab with a
+    // list overrides this for ↑/↓/j/k, Enter, Delete. true = handled.
+    function handleKey(event) { return false }
+
     function close() { IslandState.close() }
     function openPopup(name) { IslandState.open(name, screen) }
     // keyboard focus back to the island (h/l, Esc), e.g. when a form closes

@@ -20,6 +20,9 @@ Singleton {
     readonly property string glyph: available ? data.glyph : ""
     readonly property string temp: available ? data.temp + "°" : ""
     readonly property string desc: available ? data.desc : ""
+    // today's, local "2026-09-30T07:12" (empty from an older cache)
+    readonly property string sunrise: available && data.sunrise ? data.sunrise : ""
+    readonly property string sunset: available && data.sunset ? data.sunset : ""
 
     FileView {
         id: cache

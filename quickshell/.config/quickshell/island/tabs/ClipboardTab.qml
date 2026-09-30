@@ -12,6 +12,8 @@ import quickshell
 import "../../components"
 import "../../state"
 import ".."
+import "run"
+import "clip.js" as Clip
 
 Tab {
     id: menu
@@ -68,12 +70,37 @@ Tab {
                     const tab = line.indexOf("\t")
                     if (tab > 0) out.push({ id: line.slice(0, tab), preview: line.slice(tab + 1) })
                 }
-                menu.entries = out
+                menu.entries = Clip.dedupe(out)
             }
         }
         onExited: (code) => {
             if (code === 127) menu.error = "cliphist isn't installed (sudo apt install cliphist)"
             else if (code !== 0) menu.error = "cliphist failed (exit " + code + ")"
+        }
+    }
+
+    // [clear] wipes the whole history, so it asks for a second click
+    property bool clearArmed: false
+    Timer { id: disarm; interval: 3000; onTriggered: menu.clearArmed = false }
+
+    SectionHeader {
+        title: "clipboard"
+        count: String(menu.entries.length)
+
+        TextButton {
+            visible: menu.entries.length > 0
+            label: menu.clearArmed ? "clear all? click again" : "clear"
+            baseColor: menu.clearArmed ? Colors.red : Colors.acid
+            onClicked: {
+                if (!menu.clearArmed) {
+                    menu.clearArmed = true
+                    disarm.restart()
+                    return
+                }
+                menu.clearArmed = false
+                Quickshell.execDetached(["sh", "-c", "command -v cliphist >/dev/null && cliphist wipe"])
+                menu.entries = []
+            }
         }
     }
 
@@ -103,44 +130,28 @@ Tab {
     ListView {
         id: list
         width: parent.width
-        height: Math.min(contentHeight, 12 * 30)
+        height: Math.min(contentHeight, 10 * 34)
         visible: count > 0
         clip: true
-        spacing: 2
         boundsBehavior: Flickable.StopAtBounds
         model: menu.matches
         currentIndex: menu.selected
         onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
 
-        delegate: Rectangle {
-            id: row
+        delegate: ResultRow {
             required property var modelData
             required property int index
-            width: ListView.view.width
-            height: 28
-            color: index === menu.selected || rowMouse.containsMouse ? Colors.surface : "transparent"
-
-            Marker { visible: row.index === menu.selected }
-
-            MonoText {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                elide: Text.ElideRight
-                color: row.index === menu.selected ? Colors.neon : Colors.fg
-                // one line: previews keep their newlines/tabs
-                text: row.modelData.preview.replace(/\s+/g, " ")
-            }
-
-            MouseArea {
-                id: rowMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: menu.copy(row.modelData)
-            }
+            readonly property var entry: Clip.classify(modelData.preview)
+            // one line: previews keep their newlines/tabs
+            item: ({
+                kind: "action",
+                title: entry.title || modelData.preview.replace(/\s+/g, " "),
+                subtitle: entry.subtitle,
+                glyph: Clip.GLYPHS[entry.kind],
+                swatch: entry.color || ""
+            })
+            current: index === menu.selected
+            onClicked: menu.copy(modelData)
         }
     }
 
