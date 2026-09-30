@@ -70,6 +70,22 @@ which session services aren't running, and whether tmux, sway or
 quickshell are running an older config than the one on disk (fix: run
 `dots-reload`). Exits 1 if anything failed.
 
+### When things break
+
+- **quickshell's config doesn't load:** `qs-watchdog` runs the last config
+  that did (`~/.local/state/dots/quickshell-good`) and says so in a
+  swaynag. Fix the config and run `dots-reload quickshell`; once it loads,
+  the fallback is stopped.
+- **Locking:** everything locks through `dots-lock`, which uses swaylock
+  when quickshell's lock screen doesn't come up.
+- **sway dies at startup:** `sway-session` retries once with the stock
+  `/etc/sway/config` (safe mode); see `~/.local/state/sway.log`. If that
+  fails too you're back at the login screen, where GNOME still works.
+  `dots-reload` won't reload a sway config that fails `sway -C`.
+- **The session is wedged:** switch to a TTY (Ctrl+Alt+F3) or ssh in and
+  run `dots-rescue` for the options (restart or roll back quickshell,
+  reload or exit sway, get a swaylock prompt).
+
 CI (`.github/workflows`) runs shellcheck and `fish --no-execute` over the
 repo on every push, and `./install.sh --ci` in fresh Fedora, Debian,
 Ubuntu 24.04 and Arch containers whenever the installer changes (and
