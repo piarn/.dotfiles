@@ -26,7 +26,7 @@ Item {
         hostProc.running = true
     }
 
-    function short(p) { return p.startsWith(home) ? "~" + p.slice(home.length) : p }
+    function shortPath(p) { return p.startsWith(home) ? "~" + p.slice(home.length) : p }
 
     function sessionRows() {
         return sessions.map(s => ({
@@ -45,7 +45,7 @@ Item {
             return {
                 kind: "action", group: "project", key: "project:" + p,
                 title: name, glyph: "\u{e97a}", aliases: "project repo git code",   // account_tree
-                subtitle: short(p),
+                subtitle: shortPath(p),
                 run: () => Quickshell.execDetached([root.open, name, p, "nvim"]),
             }
         })

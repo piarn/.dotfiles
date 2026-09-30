@@ -34,3 +34,7 @@ swayidle
 brightnessctl
 pulseaudio-utils
 neovim
+
+# installer prerequisites
+curl
+stow

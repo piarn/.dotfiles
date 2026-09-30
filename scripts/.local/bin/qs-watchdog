@@ -24,7 +24,7 @@ lockflag="$run/quickshell-locked"
 stale=10
 # Same launch line as sway's exec_always (QML2_IMPORT_PATH loads the rice
 # Colors singleton); swaymsg exec runs it with sway's environment.
-start="env QML2_IMPORT_PATH=$HOME/.rice quickshell -n"
+start="env QML2_IMPORT_PATH=$HOME/.rice $HOME/.local/bin/quickshell -n"
 
 exec 9>"$run/qs-watchdog.lock"
 flock -n 9 || exit 0
@@ -35,7 +35,7 @@ restart() {
     if [ "$(cat "$lockflag" 2>/dev/null)" = 1 ]; then
         for _ in 1 2 3 4 5 6 7 8 9 10; do
             sleep 1
-            qs ipc call lock lock >/dev/null 2>&1 && break
+            "$HOME/.local/bin/qs" ipc call lock lock >/dev/null 2>&1 && break
         done
     fi
 }

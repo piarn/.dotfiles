@@ -34,17 +34,19 @@ declare -A ARCH_NAME_OVERRIDES=(
 # Installs everything listed in .bootstrap/packages.txt (one binary/package
 # name per line, matching dnf naming — see the override maps above for the
 # handful that need translating on apt/pacman) that isn't already on PATH.
-install_packages() {
-    local pkgs=() pkg missing=() probe
+# Prints (one per line) the packages.txt entries not already on PATH.
+missing_packages() {
+    local pkg probe
     while IFS= read -r pkg; do
         case "$pkg" in ''|'#'*) continue ;; esac
-        pkgs+=("$pkg")
-    done <"$BOOTSTRAP_DIR/packages.txt"
-
-    for pkg in "${pkgs[@]}"; do
         probe="${PACKAGE_BIN_OVERRIDES[$pkg]:-$pkg}"
-        command -v "$probe" >/dev/null 2>&1 || missing+=("$pkg")
-    done
+        command -v "$probe" >/dev/null 2>&1 || echo "$pkg"
+    done <"$BOOTSTRAP_DIR/packages.txt"
+}
+
+install_packages() {
+    local pkg missing=()
+    mapfile -t missing < <(missing_packages)
 
     if [ ${#missing[@]} -eq 0 ]; then
         echo "==> packages already installed, nothing to do"
@@ -196,6 +198,7 @@ LOCAL_BIN="$HOME/.local/bin"
 # build doesn't produce, so this makes one too.
 QUICKSHELL_VERSION=v0.3.1
 QUICKSHELL_VERSION_FILE="$HOME/.local/share/dots-quickshell-version"
+QT_FALLBACK_VERSION=6.8.3
 
 install_quickshell() {
     if [ -x "$LOCAL_BIN/quickshell" ] \
@@ -210,7 +213,7 @@ install_quickshell() {
             qt6-qt5compat-devel qt6-qtimageformats qt6-qtshadertools-devel \
             libdrm-devel wayland-devel wayland-protocols-devel mesa-libgbm-devel \
             vulkan-headers spirv-tools-devel cli11-devel pipewire-devel \
-            pam-devel jemalloc-devel
+            pam-devel jemalloc-devel libunwind-devel python3
     elif command -v apt >/dev/null 2>&1; then
         sudo apt update && sudo apt install -y cmake ninja-build pkgconf g++ \
             qt6-base-dev qt6-declarative-dev qt6-wayland-dev qt6-shadertools-dev \
@@ -218,15 +221,40 @@ install_quickshell() {
             libcli11-dev libwayland-dev wayland-protocols libpipewire-0.3-dev \
             libpam0g-dev libpolkit-agent-1-dev libpolkit-gobject-1-dev libglib2.0-dev \
             libdrm-dev libgbm-dev libjemalloc-dev libegl-dev libgles-dev libvulkan-dev \
-            libxcb1-dev spirv-tools
+            libxcb1-dev spirv-tools libunwind-dev python3-venv
     elif command -v pacman >/dev/null 2>&1; then
         sudo pacman -S --needed --noconfirm base-devel cmake ninja pkgconf \
             cli11 qt6-shadertools spirv-tools vulkan-headers wayland-protocols \
             qt6-base qt6-declarative qt6-wayland wayland libdrm libpipewire pam \
-            polkit mesa libxcb cpptrace jemalloc
+            polkit mesa libxcb libunwind jemalloc python
     else
         echo "error: no supported package manager (apt/dnf/pacman) for quickshell's build deps" >&2
         exit 1
+    fi
+
+    # quickshell needs Qt >= 6.6; Ubuntu 24.04 ships 6.4. Fall back to an
+    # upstream Qt build (aqtinstall) in ~/.local/qt, rpath'd into the binary
+    # so nothing needs LD_LIBRARY_PATH at runtime.
+    local qt_ver qt_args=()
+    qt_ver=$(pkg-config --modversion Qt6Core 2>/dev/null || echo 0)
+    if [ "$(printf '%s\n6.6.0\n' "$qt_ver" | sort -V | head -1)" != "6.6.0" ]; then
+        local qt_root="$HOME/.local/qt" qt_dir
+        qt_dir="$qt_root/$QT_FALLBACK_VERSION/gcc_64"
+        if [ ! -d "$qt_dir/lib/cmake/Qt6" ]; then
+            if [ "$(uname -m)" != x86_64 ]; then
+                echo "error: system Qt $qt_ver is too old for quickshell and no fallback Qt exists for $(uname -m)" >&2
+                exit 1
+            fi
+            echo "==> system Qt is $qt_ver (< 6.6); installing Qt $QT_FALLBACK_VERSION via aqtinstall"
+            local venv
+            venv=$(mktemp -d)
+            python3 -m venv "$venv"
+            "$venv/bin/pip" install -q aqtinstall
+            "$venv/bin/aqt" install-qt linux desktop "$QT_FALLBACK_VERSION" linux_gcc_64 \
+                -m qt5compat qtshadertools qtimageformats -O "$qt_root"
+            rm -rf "$venv"
+        fi
+        qt_args=(-DCMAKE_PREFIX_PATH="$qt_dir" -DCMAKE_INSTALL_RPATH="$qt_dir/lib" -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON)
     fi
 
     echo "==> building quickshell $QUICKSHELL_VERSION from source (a few minutes)"
@@ -236,7 +264,8 @@ install_quickshell() {
         https://git.outfoxxed.me/outfoxxed/quickshell "$tmp/quickshell"
     (
         cd "$tmp/quickshell"
-        cmake -GNinja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local"
+        # cpptrace (crash handler) has no Ubuntu/Fedora package; let quickshell fetch it
+        cmake -GNinja -B build -DCMAKE_BUILD_TYPE=Release -DVENDOR_CPPTRACE=ON -DCMAKE_INSTALL_PREFIX="$HOME/.local" "${qt_args[@]}"
         cmake --build build
         cmake --install build
     )
@@ -405,6 +434,74 @@ install_fish_plugins() {
     fish -c "source $BOOTSTRAP_DIR/fish/install_bass.sh"
 }
 
+# Read-only preflight: verifies everything the install will need is
+# obtainable *before* anything is installed, removed or modified. No sudo,
+# no package-index refresh, no writes — it only inspects and reports, and
+# aborts with the full list of problems if any are found.
+preflight() {
+    local problems=() pkg name
+
+    echo "==> preflight: checking dependencies (read-only)"
+
+    local pm=""
+    for name in apt dnf pacman; do
+        command -v "$name" >/dev/null 2>&1 && { pm=$name; break; }
+    done
+    [ -n "$pm" ] || problems+=("no supported package manager (apt/dnf/pacman)")
+
+    # Only what can't be bootstrapped by the installer itself.
+    for name in sudo git python3; do
+        command -v "$name" >/dev/null 2>&1 || problems+=("'$name' is required to run the installer but is not on PATH")
+    done
+
+    # Every package the install would fetch must exist in the configured repos.
+    local missing=() avail
+    mapfile -t missing < <(missing_packages)
+    [ "$(uname -m)" = x86_64 ] || [ "$(uname -m)" = aarch64 ] \
+        || problems+=("unsupported CPU architecture $(uname -m) (yazi/lazygit/lazydocker/satty release binaries)")
+    command -v npm >/dev/null 2>&1 || missing+=(nodejs npm)
+    if [ "$pm" = apt ] && ! python3 -c 'import venv, ensurepip' >/dev/null 2>&1; then
+        missing+=(python3-venv)
+    fi
+    for pkg in "${missing[@]}"; do
+        case "$pm" in
+            apt)
+                name="${APT_NAME_OVERRIDES[$pkg]:-$pkg}"
+                avail=$(apt-cache policy "$name" 2>/dev/null | awk '/Candidate:/ {print $2}')
+                [ -n "$avail" ] && [ "$avail" != "(none)" ] ;;
+            dnf)
+                dnf -q list --available "$pkg" >/dev/null 2>&1 ;;
+            pacman)
+                name="${ARCH_NAME_OVERRIDES[$pkg]:-$pkg}"
+                pacman -Si "$name" >/dev/null 2>&1 ;;
+            *) true ;;
+        esac || problems+=("package '$pkg' not available from $pm repos (if the index is stale, refresh it and retry)")
+    done
+
+    # Remote hosts the installer pulls from.
+    local host
+    for host in github.com git.outfoxxed.me dl.flathub.org; do
+        # curl itself gets installed from packages.txt if absent
+        command -v curl >/dev/null 2>&1 || break
+        curl -fsS --head --max-time 10 "https://$host" >/dev/null 2>&1 \
+            || problems+=("cannot reach https://$host")
+    done
+
+    # .rice is cloned over ssh, so a working key matters up front.
+    if [ ! -d "$RICE_DIR/.git" ]; then
+        GIT_TERMINAL_PROMPT=0 git ls-remote "$RICE_REPO" HEAD >/dev/null 2>&1 \
+            || problems+=("cannot read $RICE_REPO (ssh key for github.com set up?)")
+    fi
+
+    if [ ${#problems[@]} -gt 0 ]; then
+        echo "error: preflight failed, nothing was changed:" >&2
+        printf '  - %s\n' "${problems[@]}" >&2
+        exit 1
+    fi
+    echo "==> preflight OK"
+}
+
+preflight
 install_packages
 install_quickshell
 install_flatpaks

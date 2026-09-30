@@ -25,7 +25,7 @@ set $term_fast foot
 set $files flatpak run org.kde.dolphin
 set $browser flatpak run org.mozilla.firefox
 # quickshell's IPC client (the distro package)
-set $qs qs
+set $qs $HOME/.local/bin/qs
 # The command center (~/.dots/quickshell/.config/quickshell/popups/CommandCenter.qml):
 # apps plus the prefix modes (=calc >run /files ?web @windows ~dev !tools :session).
 set $menu exec $qs ipc call commandcenter toggle
@@ -293,7 +293,7 @@ bindsym $mod+r mode "resize"
 # ~/.rice/quickshell's Colors singleton. `-n` skips spawning a duplicate if
 # one's already running, so `exec_always` (needed to survive `$mod+Shift+c`
 # reloads) doesn't pile up processes. qs-watchdog restarts it the same way.
-exec_always env QML2_IMPORT_PATH=$HOME/.rice quickshell -n
+exec_always env QML2_IMPORT_PATH=$HOME/.rice $HOME/.local/bin/quickshell -n
 # Kills and restarts quickshell if it hangs (a frozen popup would otherwise
 # hold all input); see the comment atop the script.
 exec_always ~/.local/bin/qs-watchdog
