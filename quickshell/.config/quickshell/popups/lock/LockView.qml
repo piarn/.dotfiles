@@ -17,6 +17,8 @@ LockFace {
     statusLine.host: lock.host
     statusLine.lockedFor: lock.lockedFor
     statusLine.uptime: lock.uptime
+    statusLine.weatherGlyph: lock.weatherGlyph
+    statusLine.weather: lock.weather
     statusLine.netGlyph: lock.netGlyph
     statusLine.netLabel: lock.netLabel
     statusLine.vpns: lock.vpns

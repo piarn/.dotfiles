@@ -120,6 +120,12 @@ command center, lock screen, notifications). The rule: `$mod`+letter is
 the everyday action, `$mod+Shift` is the bigger version (move, capture,
 system). Plain Alt is left to apps.
 
+Weather (the bar's clock pill and the lock screen) is for one fixed city,
+set per machine and kept out of the repo:
+`echo city=Vilnius > ~/.config/dots/weather.conf`. `dots-weather.timer`
+fetches it from Open-Meteo every 30 minutes; without that file it stays
+hidden.
+
 | Keys | Action |
 | --- | --- |
 | `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |

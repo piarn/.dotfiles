@@ -104,23 +104,49 @@ Variants {
             radius: Style.radius
             border.width: Style.border
             border.color: Colors.dim
-            width: clock.implicitWidth + 20
+            width: clockRow.implicitWidth + 20
             height: bar.pillHeight
 
-            Text {
-                id: clock
+            Row {
+                id: clockRow
                 anchors.centerIn: parent
-                font.family: "monospace"
-                font.pixelSize: 13
-                font.bold: true
-                color: Colors.neon
-                text: Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
+                spacing: 10
 
-                Timer {
-                    interval: 1000
-                    running: true
-                    repeat: true
-                    onTriggered: clock.text = Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
+                Text {
+                    id: clock
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: "monospace"
+                    font.pixelSize: 13
+                    font.bold: true
+                    color: Colors.neon
+                    text: Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
+
+                    Timer {
+                        interval: 1000
+                        running: true
+                        repeat: true
+                        onTriggered: clock.text = Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
+                    }
+                }
+
+                // current weather (state/WeatherState.qml), gone when stale
+                Row {
+                    visible: WeatherState.available
+                    spacing: 4
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Icon {
+                        text: WeatherState.glyph
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.family: "monospace"
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: Colors.fg
+                        text: WeatherState.temp
+                    }
                 }
             }
         }

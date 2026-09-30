@@ -76,6 +76,9 @@ Item {
         : net.type === "wifi" ? net.connection
         : net.type === "wwan" ? "mobile" : "wired"
 
+    readonly property string weatherGlyph: WeatherState.glyph
+    readonly property string weather: WeatherState.available ? WeatherState.temp + " " + WeatherState.desc : ""
+
     readonly property string netGlyph: NetworkState.icon(net)
     readonly property var vpns: NetworkState.activeVpns
 

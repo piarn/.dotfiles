@@ -13,4 +13,4 @@ BindsTo=graphical-session.target
 Wants=graphical-session-pre.target
 After=graphical-session-pre.target
 Wants=polkit-agent.service swayidle.service cliphist.service udiskie.service
-Wants=bluetooth-agent.service layout-watch.service qs-watchdog.service
+Wants=bluetooth-agent.service layout-watch.service qs-watchdog.service dots-weather.timer
