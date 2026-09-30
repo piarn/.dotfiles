@@ -25,6 +25,9 @@ check() {
     if "$@"; then printf '  ok    %s\n' "$name"; else printf '  FAIL  %s\n' "$name"; fails=$((fails + 1)); fi
 }
 
+# `check NAME not CMD...`: check wants a command, and ! isn't one
+not() { ! "$@"; }
+
 called() { grep -qF -- "$1" "$CALLS"; }
 not_called() { ! grep -qF -- "$1" "$CALLS"; }
 
