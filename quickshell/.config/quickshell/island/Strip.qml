@@ -1,6 +1,6 @@
 // The collapsed island: workspaces │ clock │ status, in one row.
 //  - workspaces as tmux-style text, the focused one inverted, urgent red
-//  - the clock (click: calendar tab)
+//  - date and time, yyyy-MM-dd HH:mm:ss (click: calendar tab)
 //  - status (click: system tab): the screen recording while one runs
 //    (click stops it), weather, network, battery, and ● while
 //    notifications are unread (click: notifications tab). The status
@@ -90,13 +90,13 @@ Item {
         anchors.centerIn: parent
         font.bold: true
         color: IslandState.tab === "calendar" && IslandState.screen === strip.screen ? Colors.fg : Colors.neon
-        text: Qt.formatDateTime(new Date(), "HH:mm")
+        text: Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
 
         Timer {
             interval: 1000
             running: true
             repeat: true
-            onTriggered: clock.text = Qt.formatDateTime(new Date(), "HH:mm")
+            onTriggered: clock.text = Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
         }
 
         MouseArea {

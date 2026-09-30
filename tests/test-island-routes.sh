@@ -7,8 +7,9 @@ js=$REPO/quickshell/.config/quickshell/island/routes.js
 js() { node -e "$(grep -v '^\.pragma' "$js" 2>/dev/null); console.log(JSON.stringify($1))"; }
 is() { [ "$(js "$1")" = "$2" ]; }
 
-check "tab order" is "TABS" '["system","calendar","notifications","network","run","clipboard"]'
-check "tab names route to themselves" is "TABS.map(tabFor)" '["system","calendar","notifications","network","run","clipboard"]'
+check "tab order" is "TABS" '["system","calendar","notifications","network","themes","run","clipboard"]'
+check "tab names route to themselves" is "TABS.map(tabFor)" '["system","calendar","notifications","network","themes","run","clipboard"]'
+check "theme -> themes" is "tabFor('theme')" '"themes"'
 check "quicksettings -> system" is "tabFor('quicksettings')" '"system"'
 check "battery -> system" is "tabFor('battery')" '"system"'
 check "bluetooth -> network" is "tabFor('bluetooth')" '"network"'

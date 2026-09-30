@@ -4,12 +4,13 @@
 // sway binds and scripts keep working. No QML types, so
 // tests/test-island-routes.sh runs it under node.
 
-const TABS = ["system", "calendar", "notifications", "network", "run", "clipboard"]
+const TABS = ["system", "calendar", "notifications", "network", "themes", "run", "clipboard"]
 
 const ALIASES = {
     quicksettings: "system",
     battery: "system",
     bluetooth: "network",
+    theme: "themes",
     commandcenter: "run"
 }
 

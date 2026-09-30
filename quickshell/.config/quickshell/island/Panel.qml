@@ -19,7 +19,7 @@ FocusScope {
     // the tab area's cap, set by the Island adopting this (70% of its screen)
     property real maxHeight: 700
 
-    readonly property var tabs: [systemTab, calendarTab, notificationsTab, networkTab, runTab, clipboardTab]
+    readonly property var tabs: [systemTab, calendarTab, notificationsTab, networkTab, themesTab, runTab, clipboardTab]
     readonly property Item current: tabs.find(t => t.shown) || null
     // run/clipboard, or a tab that's in a text field right now
     readonly property bool needsKeyboard: IslandState.wantsKeyboard || (current !== null && current.needsKeyboard)
@@ -79,14 +79,14 @@ FocusScope {
                     MonoText {
                         visible: index > 0
                         anchors.verticalCenter: parent.verticalCenter
-                        leftPadding: 6
-                        rightPadding: 6
+                        leftPadding: 2
+                        rightPadding: 2
                         color: Colors.dim
                         text: "│"
                     }
 
                     Rectangle {
-                        width: label.implicitWidth + 12
+                        width: label.implicitWidth + 10
                         height: 20
                         color: open ? Colors.neon : "transparent"
 
@@ -131,6 +131,7 @@ FocusScope {
                 CalendarTab { id: calendarTab; width: parent.width }
                 NotificationsTab { id: notificationsTab; width: parent.width }
                 NetworkTab { id: networkTab; width: parent.width }
+                ThemesTab { id: themesTab; width: parent.width }
                 RunTab { id: runTab; width: parent.width }
                 ClipboardTab { id: clipboardTab; width: parent.width }
             }
