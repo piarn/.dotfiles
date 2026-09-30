@@ -4,6 +4,7 @@
 # sway stub: SWAY_STUB fast-fail | slow-fail | ok | safe-ok (fails unless given -c)
 stub sway '
 echo "sway $*" >>"$CALLS"
+echo "explicit-sync-off=${WLR_RENDER_NO_EXPLICIT_SYNC:-unset}" >>"$CALLS"
 case "$SWAY_STUB" in
     fast-fail) exit 1 ;;
     slow-fail) sleep 3; exit 1 ;;
@@ -18,6 +19,9 @@ S=$REPO/.bootstrap/sway-session
 : >"$CALLS"; SWAY_STUB=ok "$S"; rc=$?
 check "clean exit: sway run once" [ "$(grep -c '^sway' "$CALLS")" = 1 ]
 check "clean exit: status 0" [ "$rc" = 0 ]
+# wlroots 0.19's explicit-sync release path aborts sway (buffer->n_locks > 0
+# assertion) when e.g. a new kitty starts
+check "explicit sync disabled for sway" called "explicit-sync-off=1"
 
 : >"$CALLS"; SWAY_STUB=safe-ok "$S"; rc=$?
 check "fast failure: retried with the safe config" called "-c /safe/config"

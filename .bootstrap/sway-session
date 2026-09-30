@@ -36,6 +36,14 @@ if [ -d /sys/module/nvidia_drm ]; then
     fi
 fi
 
+# wlroots 0.19 aborts sway in its explicit-sync (linux-drm-syncobj-v1)
+# release path — `wlr_linux_drm_syncobj_v1_state_signal_release_with_buffer:
+# Assertion buffer->n_locks > 0 failed`, typically when a new kitty starts
+# (also reported at bbs.archlinux.org/viewtopic.php?id=308607). With this
+# sway doesn't offer the protocol and clients use implicit sync instead.
+# Drop it once Fedora ships wlroots 0.20 / sway 1.12.
+export WLR_RENDER_NO_EXPLICIT_SYNC=1
+
 # GDM throws the session's stderr away, so a sway that dies at startup
 # otherwise leaves no trace. Previous session's log kept as sway.log.old.
 log="${XDG_STATE_HOME:-$HOME/.local/state}/sway.log"
