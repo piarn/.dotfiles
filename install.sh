@@ -225,11 +225,11 @@ install_quickshell() {
     echo "==> installing quickshell $QUICKSHELL_VERSION's build dependencies"
     if command -v dnf >/dev/null 2>&1; then
         sudo dnf install -y cmake ninja-build pkgconf-pkg-config gcc-c++ \
-            qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtwayland-devel \
+            qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtwayland-devel \
             qt6-qt5compat-devel qt6-qtimageformats qt6-qtshadertools-devel \
             libdrm-devel wayland-devel wayland-protocols-devel mesa-libgbm-devel \
             vulkan-headers spirv-tools-devel cli11-devel pipewire-devel \
-            pam-devel jemalloc-devel libunwind-devel python3
+            pam-devel polkit-devel jemalloc-devel libunwind-devel python3
     elif command -v apt >/dev/null 2>&1; then
         sudo apt update && sudo apt install -y cmake ninja-build pkgconf g++ \
             qt6-base-dev qt6-declarative-dev qt6-wayland-dev qt6-shadertools-dev \
