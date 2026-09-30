@@ -118,9 +118,13 @@ Item {
     WlSessionLock {
         id: sessionLock
 
+        // Only "1" is written here; "0" only on a real unlock (PAM success
+        // below). A fresh instance can report unlocked here during startup,
+        // and writing "0" then overwrote the flag of a lock it was about to
+        // take over: sway stayed locked with no client, a red screen.
         onLockStateChanged: {
-            lockFlag.setText(locked ? "1\n" : "0\n")
             if (locked) {
+                lockFlag.setText("1\n")
                 root.currentText = ""
                 root.showFailure = false
                 root.statusMessage = ""
@@ -170,6 +174,7 @@ Item {
         onCompleted: (result) => {
             root.unlockInProgress = false
             if (result === PamResult.Success) {
+                lockFlag.setText("0\n")
                 sessionLock.locked = false
                 // don't keep the password in memory until the next lock
                 root.currentText = ""
