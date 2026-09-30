@@ -43,11 +43,19 @@ Item {
     }
 
     PopupWindow {
+        id: tipWindow
+        // Only grows while shown (resets once hidden): clicking changes the
+        // text ("volume 59%" → "muted"), and a shrinking, re-centering
+        // tooltip jumps under the pointer.
+        property real widest: 0
         anchor.item: q
         anchor.rect.x: q.width / 2 - implicitWidth / 2
         anchor.rect.y: q.height + 10
         visible: q.tip !== "" && (q.forceTip || (mouse.containsMouse && !IslandState.grown))
-        implicitWidth: tipText.implicitWidth + 16
+        readonly property real needed: tipText.implicitWidth + 16
+        onVisibleChanged: widest = visible ? needed : 0
+        onNeededChanged: if (visible) widest = Math.max(widest, needed)
+        implicitWidth: Math.max(widest, needed)
         implicitHeight: tipText.implicitHeight + 10
         color: "transparent"
 
