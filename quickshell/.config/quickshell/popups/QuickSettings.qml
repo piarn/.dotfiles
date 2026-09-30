@@ -47,13 +47,7 @@ BarPopup {
         PopupState.toggle(popupName, menu.screen, "quicksettings")
     }
 
-    // Names of the VPNs up right now: NetworkManager profiles (minus the
-    // interfaces provider extras own, like wg0-mullvad) and provider extras.
-    readonly property var activeVpns: {
-        const hidden = [].concat(...ExtrasState.vpns.map(v => Array.from(v.interfaces)))
-        return NetworkState.vpns.filter(v => v.active && !hidden.some(h => v.name.startsWith(h))).map(v => v.name)
-            .concat(ExtrasState.vpns.filter(v => v.available && v.active).map(v => v.name))
-    }
+    readonly property var activeVpns: NetworkState.activeVpns
 
     readonly property var primaryNet: NetworkState.primary
 

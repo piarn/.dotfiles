@@ -20,8 +20,11 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pam
+import Quickshell.Services.UPower
 import QtQuick
 import quickshell
+import "../state"
+import "./lock"
 
 // Non-visual wrapper: WlSessionLock's own default property is `surface`
 // (a single Component, not a generic child list), so the PamContext/
@@ -50,6 +53,61 @@ Item {
         pam.start()
     }
 
+    // Everything the status line shows, computed once here for all screens.
+    property date now: new Date()
+    property date lockedAt: new Date()
+    // notifications present when locking; the rest arrived while locked
+    property var notificationsAtLock: []
+
+    readonly property string host: Quickshell.env("USER") + "@" + hostnameFile.text().trim()
+    readonly property string lockedFor: {
+        void root.now
+        return duration((root.now - root.lockedAt) / 1000)
+    }
+    readonly property string uptime: {
+        void root.now
+        return duration(parseFloat(uptimeFile.text()) || 0)
+    }
+    readonly property int newNotifications: NotificationState.notifications
+        .filter(n => !notificationsAtLock.includes(n)).length
+
+    readonly property var net: NetworkState.primary
+    readonly property string netLabel: !net ? "offline"
+        : net.type === "wifi" ? net.connection
+        : net.type === "wwan" ? "mobile" : "wired"
+
+    readonly property string netGlyph: NetworkState.icon(net)
+    readonly property var vpns: NetworkState.activeVpns
+
+    readonly property var battery: UPower.displayDevice
+    readonly property bool charging: battery.state === UPowerDeviceState.Charging
+        || battery.state === UPowerDeviceState.FullyCharged
+    // 0..1, or -1 on a machine without one (hides it)
+    readonly property real batteryLevel: battery.isLaptopBattery ? battery.percentage : -1
+    readonly property string batteryGlyph: BatteryState.icon(battery.percentage * 100, charging)
+
+    // 90 -> "1m", 4000 -> "1h 6m", 190000 -> "2d 4h"
+    function duration(secs) {
+        const m = Math.floor(secs / 60), h = Math.floor(m / 60), d = Math.floor(h / 24)
+        if (d > 0) return d + "d " + (h % 24) + "h"
+        if (h > 0) return h + "h " + (m % 60) + "m"
+        return Math.max(m, 0) + "m"
+    }
+
+    Timer {
+        running: sessionLock.locked
+        repeat: true
+        interval: 1000
+        triggeredOnStart: true
+        onTriggered: {
+            root.now = new Date()
+            if (root.now.getSeconds() === 0) uptimeFile.reload()
+        }
+    }
+
+    FileView { id: hostnameFile; path: "/proc/sys/kernel/hostname" }
+    FileView { id: uptimeFile; path: "/proc/uptime" }
+
     WlSessionLock {
         id: sessionLock
 
@@ -59,6 +117,9 @@ Item {
                 root.currentText = ""
                 root.showFailure = false
                 root.statusMessage = ""
+                root.lockedAt = new Date()
+                root.notificationsAtLock = NotificationState.notifications.slice()
+                uptimeFile.reload()
             }
         }
 
@@ -67,105 +128,12 @@ Item {
                 id: surface
                 color: Colors.black
 
-                onVisibleChanged: if (visible) Qt.callLater(() => passwordInput.forceActiveFocus())
+                onVisibleChanged: if (visible) view.reset()
 
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 28
-
-                    Column {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 4
-
-                        Text {
-                            id: clock
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            color: Colors.fg
-                            font.family: "monospace"
-                            font.pixelSize: 64
-                            text: {
-                                void ticker.tick // re-evaluate on tick
-                                const d = new Date()
-                                return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0")
-                            }
-
-                            Timer {
-                                id: ticker
-                                property int tick: 0
-                                running: true
-                                repeat: true
-                                interval: 1000
-                                onTriggered: tick++
-                            }
-                        }
-
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            color: Colors.gray
-                            font.family: "monospace"
-                            font.pixelSize: 14
-                            text: {
-                                void ticker.tick
-                                return Qt.formatDate(new Date(), "dddd, MMMM d")
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        id: box
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: 260
-                        height: 42
-                        color: Colors.black
-                        border.color: root.showFailure ? Colors.red : (passwordInput.activeFocus ? Colors.neon : Colors.dim)
-                        border.width: 1
-
-                        SequentialAnimation {
-                            id: shake
-                            NumberAnimation { target: box; property: "anchors.horizontalCenterOffset"; to: -8; duration: 40 }
-                            NumberAnimation { target: box; property: "anchors.horizontalCenterOffset"; to: 8; duration: 40 }
-                            NumberAnimation { target: box; property: "anchors.horizontalCenterOffset"; to: -6; duration: 40 }
-                            NumberAnimation { target: box; property: "anchors.horizontalCenterOffset"; to: 0; duration: 40 }
-                        }
-
-                        TextInput {
-                            id: passwordInput
-                            anchors.fill: parent
-                            anchors.margins: 10
-                            color: Colors.fg
-                            font.family: "monospace"
-                            font.pixelSize: 14
-                            clip: true
-                            echoMode: TextInput.Password
-                            passwordCharacter: "●"
-                            enabled: !root.unlockInProgress
-                            text: root.currentText
-                            onTextChanged: root.currentText = text
-
-                            Keys.onReturnPressed: root.tryUnlock()
-                        }
-                    }
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        height: 16
-                        color: root.showFailure ? Colors.red : Colors.amber
-                        font.family: "monospace"
-                        font.pixelSize: 12
-                        text: root.unlockInProgress ? "verifying..." : root.statusMessage
-                    }
-                }
-
-                Connections {
-                    target: root
-                    function onShowFailureChanged() { if (root.showFailure) shake.start() }
-                    // `text: root.currentText` on passwordInput (below) only sets
-                    // the *initial* value — Qt breaks that declarative binding the
-                    // moment the user types a keystroke (it becomes an imperative
-                    // write to `text` from then on), so resetting root.currentText
-                    // alone stops reaching the field after the first character ever
-                    // typed into it. Force the field back in sync explicitly instead.
-                    function onCurrentTextChanged() { passwordInput.text = root.currentText }
+                LockView {
+                    id: view
+                    anchors.fill: parent
+                    lock: root
                 }
             }
         }
@@ -196,6 +164,9 @@ Item {
             root.unlockInProgress = false
             if (result === PamResult.Success) {
                 sessionLock.locked = false
+                // don't keep the password in memory until the next lock
+                root.currentText = ""
+                root.statusMessage = ""
             } else {
                 root.currentText = ""
                 root.showFailure = true

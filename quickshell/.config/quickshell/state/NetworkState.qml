@@ -40,6 +40,15 @@ Item {
     readonly property string kind: !primary ? "none" : primary.type === "wifi" ? "wifi" : "eth"
     readonly property int signal: primary && primary.type === "wifi" ? primary.signal : 0
 
+    // Names of the VPNs up right now: NetworkManager profiles (minus the
+    // interfaces provider extras own, like wg0-mullvad) and provider extras.
+    // Shared by QuickSettings and the lock screen's status line.
+    readonly property var activeVpns: {
+        const hidden = [].concat(...ExtrasState.vpns.map(v => Array.from(v.interfaces)))
+        return vpns.filter(v => v.active && !hidden.some(h => v.name.startsWith(h))).map(v => v.name)
+            .concat(ExtrasState.vpns.filter(v => v.available && v.active).map(v => v.name))
+    }
+
     property bool scanning: false
     property string actionStatus: ""
     property bool busy: actionProc.running
