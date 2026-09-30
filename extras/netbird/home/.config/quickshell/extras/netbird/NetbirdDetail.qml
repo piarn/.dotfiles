@@ -1,4 +1,4 @@
-// NetBird's expanded panel in the network popup's vpn section: why
+// NetBird's expanded panel in the network tab's vpn section: why
 // management is unreachable (if it is), peers with their state, and when
 // the SSO session expires.
 import QtQuick

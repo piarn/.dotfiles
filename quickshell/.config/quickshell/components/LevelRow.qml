@@ -1,5 +1,5 @@
 // [chevron] icon + slider + percentage — the volume/mic/brightness rows in
-// QuickSettings. The chevron (only drawn when `expandable`, but its space is
+// the system tab. The chevron (only drawn when `expandable`, but its space is
 // always kept so every row's icon lines up) emits expandClicked. Left-clicking the icon or middle-clicking anywhere on the
 // row emits toggled (mute for audio rows); the wheel over the slider emits
 // stepped(±delta).

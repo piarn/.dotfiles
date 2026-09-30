@@ -115,8 +115,13 @@ session/window/pane tree popup, and direct Alt binds — see
 
 ## Desktop
 
-sway + [quickshell](quickshell/.config/quickshell) (bar, popups, the
-command center, lock screen, notifications). The rule: `$mod`+letter is
+sway + [quickshell](quickshell/.config/quickshell): one 600px **island**
+centered at the top of each screen (workspaces · clock · status) that grows
+into tabs — system, calendar, notifications, network, run (the command
+center) and clipboard — plus the lock screen and notification toasts.
+Click the clock for the calendar, the status for system, `●` for
+notifications; inside, `h`/`l` or Ctrl+Tab switch tabs, Esc or a click
+outside collapses it. The rule: `$mod`+letter is
 the everyday action, `$mod+Shift` is the bigger version (move, capture,
 system). Plain Alt is left to apps.
 
@@ -129,9 +134,9 @@ hidden.
 | Keys | Action |
 | --- | --- |
 | `$mod+Return` / `$mod+Shift+Return` | terminal (kitty) / quick terminal (foot) |
-| `$mod+Space` / `$mod+d` | the command center (same window, either key) |
+| `$mod+Space` / `$mod+d` | the island's run tab, the command center (either key) |
 | `$mod+q` | close window |
-| `$mod+v` | clipboard history (cliphist) |
+| `$mod+v` | the island's clipboard tab (cliphist history) |
 | `$mod+e` | file manager (Dolphin) |
 | `$mod+b` | browser (Firefox) |
 | `$mod+h/j/k/l`, arrows | focus; add Shift to move the window |
@@ -172,9 +177,10 @@ everywhere too.
 '<text>'` opens it pre-typed, e.g. `'@'` to bind a key straight to the
 window switcher, or `':'` straight to session actions.
 
-The bar's ≡ quick settings is the mouse-first glance of the same things
-(plus the tray, notifications and media), and its popups hold the deep
-views (enterprise/hidden Wi-Fi, VPN details, battery).
+The command center is the island's run tab. The system tab is the
+mouse-first glance of the same things (plus the tray, media and battery),
+and the other tabs hold the deep views (enterprise/hidden Wi-Fi, VPN
+details, calendar, notifications).
 
 Background services run as systemd user services under
 `dots-session.target` (`sway/.config/systemd/user`), started once sway has

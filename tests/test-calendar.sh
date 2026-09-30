@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# The calendar popup's date math (popups/calendar/calendar.js) under node.
+# The calendar tab's date math (island/calendar.js) under node.
 . "$(dirname "$0")/lib.sh"
 
 command -v node >/dev/null || { echo "  skip  (no node)"; exit 0; }
-js=$REPO/quickshell/.config/quickshell/popups/calendar/calendar.js
+js=$REPO/quickshell/.config/quickshell/island/calendar.js
 
 # js EXPR: prints EXPR evaluated with calendar.js loaded (its QML-only
 # `.pragma library` line dropped)

@@ -1,4 +1,4 @@
-// Tailscale's expanded panel in the network popup's vpn section: the
+// Tailscale's expanded panel in the network tab's vpn section: the
 // login link while one is pending, the exit node picker (click one to route
 // everything through it, [none] to stop), and the tailnet's peers.
 import QtQuick

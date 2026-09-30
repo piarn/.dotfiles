@@ -1,29 +1,24 @@
-// Calendar and notifications, opened from the clock in the middle of the
-// bar (and `qs ipc call popup toggle calendar`; "notifications" still
-// works). A month grid with ISO week numbers, Monday first (the math is in
-// calendar/calendar.js): ‹ › or the scroll wheel change month, the title
-// jumps back to today, and it always opens on the current month. Below it,
-// every notification until dismissed (toasts are just the on-screen subset,
-// see NotificationToasts.qml), with do-not-disturb.
+// The island's calendar tab (click the clock): a month grid with ISO week
+// numbers, Monday first (the math is in island/calendar.js): ‹ › or the
+// scroll wheel change month, the title jumps back to today, and it always
+// opens on the current month.
 import QtQuick
 import quickshell
-import "../state"
-import "../components"
-import "calendar/calendar.js" as Cal
+import "../../state"
+import "../../components"
+import ".."
+import "../calendar.js" as Cal
 
-BarPopup {
+Tab {
     id: menu
     name: "calendar"
-    // just the grid (week column + 7 days) plus the card's padding
-    fixedWidth: 8 * cell + 24
-    topCenter: true
 
     property date today: new Date()
     property int year: today.getFullYear()
     property int month: today.getMonth()
 
     readonly property var grid: Cal.monthGrid(year, month)
-    readonly property int cell: 30
+    readonly property int cell: 40
 
     function shift(months) {
         const d = new Date(year, month + months, 1)
@@ -43,7 +38,7 @@ BarPopup {
 
     // midnight passing while it's open
     Timer {
-        running: menu.visible
+        running: menu.shown
         interval: 60 * 1000
         repeat: true
         onTriggered: menu.today = new Date()
@@ -153,65 +148,5 @@ BarPopup {
         text: Qt.formatDate(menu.today, "dddd").toLowerCase()
             + " · week " + Cal.isoWeek(menu.today).week
             + " · day " + Cal.dayOfYear(menu.today)
-    }
-
-    Divider {}
-
-    // notifications: title, then its buttons on their own line (side by
-    // side they don't fit the calendar's width)
-    MonoText {
-        color: Colors.gray
-        text: "notifications" + (NotificationState.notifications.length ? " · " + NotificationState.notifications.length : "")
-    }
-
-    Row {
-        spacing: 12
-
-        // do-not-disturb: hides toasts; critical ones still break through
-        TextButton {
-            label: NotificationState.dnd ? "silenced" : "silence"
-            baseColor: NotificationState.dnd ? Colors.red : Colors.acid
-            onClicked: NotificationState.toggleDnd()
-        }
-        TextButton {
-            visible: NotificationState.notifications.length > 0
-            label: "clear all"
-            onClicked: NotificationState.clearAll()
-        }
-    }
-
-    MonoText {
-        visible: NotificationState.notifications.length === 0
-        font.pixelSize: 13
-        color: Colors.gray
-        text: "nothing here"
-    }
-
-    // Scrolls once the list outgrows half the screen (the calendar takes
-    // the top of the card).
-    Flickable {
-        width: parent.width
-        height: Math.min(list.implicitHeight, (menu.screen ? menu.screen.height : 1080) * 0.5)
-        visible: NotificationState.notifications.length > 0
-        contentHeight: list.implicitHeight
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-
-        Column {
-            id: list
-            width: parent.width
-            spacing: 6
-
-            Repeater {
-                // newest first
-                model: NotificationState.notifications.slice().reverse()
-
-                delegate: NotificationCard {
-                    required property var modelData
-                    width: list.width
-                    notification: modelData
-                }
-            }
-        }
     }
 }

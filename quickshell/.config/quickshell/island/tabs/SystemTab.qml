@@ -1,6 +1,5 @@
-// Quick settings, opened from the ≡ at the end of the bar (or $mod+n) —
-// the bar's only widget, so this is the way into every other popup but the
-// calendar (the clock's), which then offers a ‹ back here. Parts:
+// The island's system tab (quick settings): opened from the island's status
+// segments or $mod+n. Parts:
 //  - tray: the StatusNotifierItem icons apps register (Slack, nm-applet, …)
 //    — the bar has no tray of its own, like Windows' hidden-icons flyout.
 //    Left click activates (menu-only items open their menu), right click
@@ -12,7 +11,7 @@
 //  - volume/mic/brightness sliders (middle click mutes, wheel steps); the
 //    chevron before volume/mic lists the output/input devices to pick from
 //  - media controls for the MPRIS player that's playing (or was last)
-//  - battery (click for details), lock and power
+//  - battery (with time left and power draw), lock and power
 import Quickshell
 import Quickshell.Services.Mpris
 import Quickshell.Services.SystemTray
@@ -20,13 +19,13 @@ import Quickshell.Services.UPower
 import Quickshell.Widgets
 import QtQuick
 import quickshell
-import "../state"
-import "../components"
+import "../../state"
+import "../../components"
+import ".."
 
-BarPopup {
+Tab {
     id: menu
-    name: "quicksettings"
-    fixedWidth: 360
+    name: "system"
 
     property string hoveredTitle: ""
     property string devicesShown: ""   // "" | "output" | "input"
@@ -40,10 +39,6 @@ BarPopup {
 
     function toggleDevices(kind) {
         devicesShown = devicesShown === kind ? "" : kind
-    }
-
-    function openPopup(popupName) {
-        PopupState.toggle(popupName, menu.screen, "quicksettings")
     }
 
     readonly property var activeVpns: NetworkState.activeVpns
@@ -366,17 +361,20 @@ BarPopup {
             MonoText {
                 anchors.verticalCenter: parent.verticalCenter
                 color: Colors.gray2
-                text: Math.round(parent.dev.percentage * 100) + "%"
-                    + (parent.charging ? " · charging" : parent.dev.state === UPowerDeviceState.FullyCharged ? " · full" : "")
+                text: {
+                    const d = parent.dev
+                    const parts = [Math.round(d.percentage * 100) + "%"]
+                    if (parent.charging) parts.push("charging")
+                    else if (d.state === UPowerDeviceState.FullyCharged) parts.push("full")
+                    const secs = parent.charging ? d.timeToFull : d.timeToEmpty
+                    if (secs > 0) {
+                        const h = Math.floor(secs / 3600), m = Math.round((secs % 3600) / 60)
+                        parts.push((h > 0 ? h + "h " + m + "m" : m + "m") + (parent.charging ? " to full" : " left"))
+                    }
+                    if (Math.abs(d.changeRate) > 0.05) parts.push(Math.abs(d.changeRate).toFixed(1) + " W")
+                    return parts.join(" · ")
+                }
             }
-        }
-
-        MouseArea {
-            anchors.fill: batteryRow
-            anchors.margins: -4
-            visible: batteryRow.visible
-            cursorShape: Qt.PointingHandCursor
-            onClicked: menu.openPopup("battery")
         }
 
         Row {
@@ -388,16 +386,13 @@ BarPopup {
                 label: "lock"
                 onClicked: {
                     menu.close()
-                    Quickshell.execDetached(["qs", "ipc", "call", "lock", "lock"])
+                    Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/dots-lock"])
                 }
             }
             TextButton {
                 label: "power"
                 baseColor: Colors.red
-                onClicked: {
-                    menu.close()
-                    Quickshell.execDetached(["qs", "ipc", "call", "commandcenter", "open", ":"])
-                }
+                onClicked: IslandState.openRun(":")
             }
         }
     }

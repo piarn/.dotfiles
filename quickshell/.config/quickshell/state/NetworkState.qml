@@ -1,5 +1,5 @@
 // Shared network status, polled once here (not per-screen) and read by both
-// Bar.qml's icon and popups/NetworkMenu.qml — both pull it in via
+// the island's Strip and its network tab (island/tabs/NetworkTab.qml) — pulled in via
 // `import "./state"` / `import "../state"`; no IPC needed since it's the
 // same QML singleton either way.
 //
@@ -42,7 +42,7 @@ Item {
 
     // Names of the VPNs up right now: NetworkManager profiles (minus the
     // interfaces provider extras own, like wg0-mullvad) and provider extras.
-    // Shared by QuickSettings and the lock screen's status line.
+    // Shared by the system tab and the lock screen's status line.
     readonly property var activeVpns: {
         const hidden = [].concat(...ExtrasState.vpns.map(v => Array.from(v.interfaces)))
         return vpns.filter(v => v.active && !hidden.some(h => v.name.startsWith(h))).map(v => v.name)
@@ -402,7 +402,7 @@ Item {
     Timer { id: debounce; interval: 400; onTriggered: root.refresh() }
 
     Timer {
-        interval: PopupState.isOpen("network") ? 3000 : 15000
+        interval: IslandState.tab === "network" ? 3000 : 15000
         running: true
         repeat: true
         triggeredOnStart: true

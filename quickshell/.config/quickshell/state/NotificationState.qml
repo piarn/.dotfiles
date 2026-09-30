@@ -112,7 +112,7 @@ Item {
     Timer {
         interval: 200
         repeat: true
-        running: root.popups.length > 0 && !root.popupsHovered && PopupState.current === ""
+        running: root.popups.length > 0 && !root.popupsHovered && !IslandState.grown
         onTriggered: {
             const r = Object.assign({}, root.remaining)
             const expired = []

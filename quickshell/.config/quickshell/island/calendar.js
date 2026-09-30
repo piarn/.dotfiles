@@ -1,5 +1,5 @@
 .pragma library
-// Date math for the calendar popup (popups/CalendarMenu.qml): ISO 8601
+// Date math for the island's calendar tab (island/tabs/CalendarTab.qml): ISO 8601
 // weeks, Monday first. No QML types in here, so tests/test-calendar.sh can
 // exercise it with plain node. Months are 0-based, like Date's.
 

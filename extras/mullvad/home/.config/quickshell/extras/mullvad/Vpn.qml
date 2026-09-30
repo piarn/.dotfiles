@@ -1,9 +1,9 @@
-// Mullvad as a VPN provider in the network popup (see
+// Mullvad as a VPN provider in the network tab (see
 // components/VpnProvider.qml). Tunnel state is event-driven off `mullvad
 // status --json listen` (one JSON line per change, the current state
 // first); the settings MullvadDetail shows (relay location, lockdown,
 // auto-connect, account expiry) only change through it or the CLI, so
-// they're re-read on popup open and after every action instead of polled.
+// they're re-read when the tab opens and after every action instead of polled.
 import Quickshell
 import Quickshell.Io
 import QtQuick

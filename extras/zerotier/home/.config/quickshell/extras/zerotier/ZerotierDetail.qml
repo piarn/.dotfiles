@@ -1,4 +1,4 @@
-// ZeroTier's expanded panel in the network popup's vpn section: this
+// ZeroTier's expanded panel in the network tab's vpn section: this
 // node's id (what a network admin authorizes), joined networks with their
 // state and [leave], and a field to join one by its 16-digit id.
 import QtQuick
@@ -110,7 +110,7 @@ Column {
         }
     }
 
-    // Exclusive keyboard for the popup while typing (see CardWindow).
+    // Exclusive keyboard for the island while typing (see island/Island.qml).
     Binding {
         target: root.provider
         property: "wantsKeyboard"

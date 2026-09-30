@@ -1,4 +1,4 @@
-// Mullvad's expanded panel in the network popup's vpn section: relay
+// Mullvad's expanded panel in the network tab's vpn section: relay
 // location picker (click a country, or › to pick one of its cities),
 // lockdown mode and auto-connect, and when the account runs out.
 import QtQuick

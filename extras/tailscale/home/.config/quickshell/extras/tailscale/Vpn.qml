@@ -1,4 +1,4 @@
-// Tailscale as a VPN provider in the network popup (see
+// Tailscale as a VPN provider in the network tab (see
 // components/VpnProvider.qml). `tailscale status --json` is polled (there's
 // no stable event stream outside `debug watch-ipn`); BackendState is the
 // tunnel state (NoState / NeedsLogin / NeedsMachineAuth / Stopped /

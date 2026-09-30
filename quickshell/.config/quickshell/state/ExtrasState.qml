@@ -2,7 +2,7 @@
 // ~/.config/quickshell/extras/<name>/. Nothing here knows about any
 // particular extra — each is picked up by file name:
 //  - Vpn.qml: a components/VpnProvider, created once here and listed in
-//    NetworkMenu's vpn section
+//    the network tab's vpn section
 // Scanned once at startup; extras.sh restarts quickshell after enabling
 // or disabling one, so new directories are always picked up.
 pragma Singleton

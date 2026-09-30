@@ -14,7 +14,7 @@ import Quickshell
 import Quickshell.Widgets
 import QtQuick
 import quickshell
-import "../../components"
+import "../../../components"
 
 Rectangle {
     id: row

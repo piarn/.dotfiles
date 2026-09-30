@@ -1,4 +1,4 @@
-// Proton VPN's expanded panel in the network popup's vpn section: sign in
+// Proton VPN's expanded panel in the network tab's vpn section: sign in
 // while signed out, otherwise the kill switch (changeable only while
 // disconnected) and a country list — click one to connect to its fastest
 // server, [fastest] for the fastest anywhere.

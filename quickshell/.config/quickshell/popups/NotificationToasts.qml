@@ -1,6 +1,6 @@
-// On-screen notification toasts, top-right under the bar on the focused
-// monitor. A small surface sized to its content (like the bar popups, see
-// CardWindow), so everything around it stays clickable. Countdown and stacking
+// On-screen notification toasts, under the island on the focused monitor,
+// at the island's 600px width. A small surface sized to its content, so
+// everything around it stays clickable. Countdown and stacking
 // live in NotificationState; hovering pauses every toast's countdown.
 import Quickshell
 import Quickshell.Wayland
@@ -17,27 +17,25 @@ PanelWindow {
     property var targetScreen: null
     readonly property bool active: NotificationState.popups.length > 0
     onActiveChanged: {
-        if (active) targetScreen = PopupState.focusedScreen
+        if (active) targetScreen = IslandState.focusedScreen
         // The surface unmaps under the pointer without a hover-exit.
         else NotificationState.popupsHovered = false
     }
 
-    // Step aside while a bar popup is open on the same monitor — both live
-    // in the top-right corner. NotificationState pauses the countdown too.
-    visible: active && !(PopupState.current !== "" && PopupState.screen === targetScreen)
+    // Step aside while the island is grown on the same monitor — it covers
+    // the same spot. NotificationState pauses the countdown too.
+    visible: active && !(IslandState.grown && IslandState.screen === targetScreen)
     screen: targetScreen
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-notifications"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Normal
     color: "transparent"
-    anchors {
-        top: true
-        right: true
-    }
-    margins.top: 6
-    margins.right: 10
-    implicitWidth: 360
+    // top-centered; the exclusive zone (island/Spacer.qml) puts it just
+    // under the collapsed island
+    anchors.top: true
+    margins.top: 4
+    implicitWidth: 600
     implicitHeight: Math.max(1, stack.implicitHeight)
 
     HoverHandler {

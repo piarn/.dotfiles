@@ -20,7 +20,7 @@
 // fire on every keystroke on the chance it's wanted. Nothing at all
 // matches -> defaultResults falls back to the same "search the web" row
 // `?` gives, instead of a dead end.
-// devRows/toolRows are handed in from outside (CommandCenter.qml's
+// devRows/toolRows are handed in from outside (RunTab.qml's
 // DevSection/ToolsSection instances) rather than owned here, keeping this
 // section a pure data/ranking layer.
 // Items: {title, subtitle, icon (theme name) or glyph, key (usage
@@ -28,7 +28,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "../../state"
+import "../../../state"
 import "search.js" as Search
 
 Item {
@@ -277,7 +277,7 @@ Item {
     // here to push a page onto, unlike the old hub.
     function toolActionRows() {
         return toolRows.filter(r => r.kind !== "header").map(it => it.kind === "page" ? Object.assign({}, it, {
-            kind: "action", run: () => root.openPopup(it.group === "clipboard" ? "clipboard" : "calendar"),
+            kind: "action", run: () => root.openPopup(it.group === "clipboard" ? "clipboard" : "notifications"),
         }) : it)
     }
 

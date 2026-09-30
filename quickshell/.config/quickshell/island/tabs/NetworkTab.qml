@@ -1,5 +1,5 @@
-// Network popup, opened from the quick settings network and bluetooth
-// tiles. [reload] re-reads NetworkManager's profiles from disk and
+// The island's network tab, opened from the system tab's network and
+// bluetooth tiles (or `qs ipc call popup toggle network|bluetooth`). [reload] re-reads NetworkManager's profiles from disk and
 // refreshes everything below. Sections:
 //  - interfaces: every managed ethernet/wifi/wwan device, with the one
 //    holding the default route marked primary, [make primary] on the rest,
@@ -16,13 +16,13 @@
 // opens nm-connection-editor.
 import QtQuick
 import quickshell
-import "../state"
-import "../components"
+import "../../state"
+import "../../components"
+import ".."
 
-BarPopup {
+Tab {
     id: menu
     name: "network"
-    fixedWidth: 400
 
     property string lastAttempted: ""
     // Network whose credentials form is open: a wifiNetworks entry, or
@@ -31,7 +31,7 @@ BarPopup {
     readonly property bool credsOpen: pwNet !== null
     readonly property bool credsHidden: credsOpen && !!pwNet.hidden
     readonly property bool credsEnterprise: credsOpen && /802\.1X/.test(pwNet.security || "")
-    // exclusive keyboard while typing credentials or searching, see CardWindow
+    // exclusive keyboard while typing credentials or searching (island/Island.qml)
     needsKeyboard: credsOpen || searching || ExtrasState.vpns.some(v => v.wantsKeyboard)
     property bool searching: false
 

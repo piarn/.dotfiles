@@ -1,5 +1,5 @@
 .pragma library
-// Pure helpers for the command center (popups/CommandCenter.qml): match
+// Pure helpers for the run tab (island/tabs/RunTab.qml): match
 // scoring and the `=` calculator.
 // No QML types in here, so it can be exercised with plain node.
 

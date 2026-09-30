@@ -66,7 +66,9 @@ Tall tabs scroll inside a cap of 70% of the screen height.
 | `$mod+Shift+Escape` | run with `:` |
 | `$mod+v` | clipboard |
 
-- Tab switching: `h`/`l`, Tab/Shift+Tab, or clicking the tab row.
+- Tab switching: `h`/`l` (or ←/→) where nothing is being typed,
+  Ctrl+Tab / Ctrl+Shift+Tab anywhere (plain Tab already moves the run
+  tab's result list), or clicking the tab row.
 - Collapse: `Esc`, clicking outside, or the same trigger again.
 - Keyboard focus follows today's rules (CardWindow's notes on sway
   1.9+): run and clipboard take the keyboard exclusively with a

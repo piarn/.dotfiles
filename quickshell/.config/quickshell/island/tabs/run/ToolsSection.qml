@@ -1,11 +1,11 @@
 // Data for the command center's `!` (tools) mode: capture (screenshots,
 // recording, color picker), clipboard history and notifications. Clipboard
-// entries load when their page opens; like popups/ClipboardMenu.qml, only
+// entries load when their page opens; like island/tabs/ClipboardTab.qml, only
 // entry ids ever go on a command line, since previews can hold passwords.
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "../../state"
+import "../../../state"
 
 Item {
     id: root
@@ -48,7 +48,7 @@ Item {
         { kind: "action", group: "notifications", key: "tool:notifications", title: "notification history",
           glyph: "\u{e7f5}", aliases: "notifications unread",
           subtitle: () => NotificationState.notifications.length + " unread",
-          run: () => root.openPopup("calendar") },
+          run: () => root.openPopup("notifications") },
         { kind: "toggle", group: "notifications", key: "tool:silence", title: "silence",
           glyph: "\u{e7f6}", aliases: "dnd do not disturb quiet",
           on: () => NotificationState.dnd, subtitle: () => NotificationState.dnd ? "toasts hidden" : "off",

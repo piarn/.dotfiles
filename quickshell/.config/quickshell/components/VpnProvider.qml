@@ -1,6 +1,6 @@
 // Base for a VPN client that isn't a NetworkManager profile (Mullvad,
 // Tailscale, NetBird, ...). An opt-in extra ships one as
-// extras/<name>/Vpn.qml (see state/ExtrasState.qml); NetworkMenu's vpn
+// extras/<name>/Vpn.qml (see state/ExtrasState.qml); the network tab's vpn
 // section lists every `available` one next to the NM profiles.
 //
 //   VpnProvider {
@@ -38,7 +38,7 @@ Scope {
     // instead); everything happens in detailComponent.
     property bool canToggle: true
     // Set while a text field in detailComponent is focused, so the popup
-    // takes the keyboard exclusively (see CardWindow).
+    // takes the keyboard exclusively (see island/Island.qml).
     property bool wantsKeyboard: false
 
     property string actionStatus: ""

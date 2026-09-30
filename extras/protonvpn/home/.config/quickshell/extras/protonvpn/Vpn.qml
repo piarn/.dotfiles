@@ -1,8 +1,8 @@
 // Proton VPN (the official open-source CLI, proton-vpn-cli) as a VPN
-// provider in the network popup (see components/VpnProvider.qml). `protonvpn
+// provider in the network tab (see components/VpnProvider.qml). `protonvpn
 // status` is plain text and a Python start-up per call, so it's polled
 // slowly; sign-in state and the kill switch come from `protonvpn config
-// list` (which fails while signed out), read on popup open and after actions.
+// list` (which fails while signed out), read when the tab opens and after actions.
 // The CLI brings its tunnel up as a NetworkManager connection named after
 // the server ("ProtonVPN CH#242"), hidden from the NM rows via `interfaces`.
 import Quickshell

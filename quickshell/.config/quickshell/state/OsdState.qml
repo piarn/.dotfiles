@@ -16,7 +16,7 @@ Item {
     property var screen: null
 
     function show(k, v, m) {
-        if (!shown) screen = PopupState.focusedScreen
+        if (!shown) screen = IslandState.focusedScreen
         kind = k
         value = v
         muted = m
@@ -46,7 +46,7 @@ Item {
 
     // The quick settings sliders already show the level.
     function suppressed() {
-        return !armed || PopupState.isOpen("quicksettings")
+        return !armed || IslandState.tab === "system"
     }
 
     Connections {

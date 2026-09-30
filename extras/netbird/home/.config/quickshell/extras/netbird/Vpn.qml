@@ -1,4 +1,4 @@
-// NetBird as a VPN provider in the network popup (see
+// NetBird as a VPN provider in the network tab (see
 // components/VpnProvider.qml). The CLI has no event stream, so `netbird
 // status --json` is polled; its daemonStatus is the tunnel state
 // (Idle / Connecting / Connected / NeedsLogin / LoginFailed / SessionExpired).

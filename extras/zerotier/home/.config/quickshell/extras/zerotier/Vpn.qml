@@ -1,4 +1,4 @@
-// ZeroTier as a VPN provider in the network popup (see
+// ZeroTier as a VPN provider in the network tab (see
 // components/VpnProvider.qml). There's no single tunnel to switch on and
 // off — the node is online while zerotier-one runs, and joins networks — so
 // no [connect]; ZerotierDetail joins/leaves networks instead. `zerotier-cli

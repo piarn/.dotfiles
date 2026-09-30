@@ -1,5 +1,5 @@
 // Output or input device picker — the list under the volume/mic rows in
-// QuickSettings, opened by the row's chevron. Clicking a device makes it
+// the system tab (island/tabs/SystemTab.qml), opened by the row's chevron. Clicking a device makes it
 // the default; the current one is highlighted and checked.
 import Quickshell.Services.Pipewire
 import QtQuick

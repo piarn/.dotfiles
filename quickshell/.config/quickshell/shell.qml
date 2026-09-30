@@ -1,21 +1,20 @@
 // Entry point: `quickshell` (or sway's `exec quickshell`) loads this as the
 // "default" config since it sits directly at ~/.config/quickshell/shell.qml.
-// Colors come from ~/.rice/quickshell/Colors.qml (see Bar.qml/CommandCenter.qml),
-// re-rendered by ~/.rice/bin/apply-theme — this file has no theme-specific
-// content itself.
+// Colors come from ~/.rice/quickshell/Colors.qml, re-rendered by
+// ~/.rice/bin/apply-theme — this file has no theme-specific content itself.
 //
-// Layout: state/ holds the pragma-Singleton status backends, popups/ holds
-// the click-to-open menus plus the free-standing surfaces (CommandCenter,
-// ClipboardMenu, LockScreen, toasts, OSD; the command center's mode data
-// providers live in popups/commandcenter/), components/ holds shared UI
-// pieces (BarPopup is the shell every bar popup is built on).
-// Bar.qml and this file stay at the root since every popup/state type ends
-// up wired through one or the other.
+// Layout: island/ is the shell's one surface — per screen a 600px Island
+// (collapsed: the Strip; grown: the tabbed Panel, island/tabs/) plus a
+// Spacer reserving its height; state/ holds the pragma-Singleton status
+// backends (IslandState: which tab is open where); popups/ holds the
+// free-standing surfaces (LockScreen, toasts, OSD); components/ holds
+// shared UI pieces.
 import Quickshell
 import Quickshell.Io
 import QtQuick
 import "./popups"
 import "./state"
+import "./island"
 
 ShellRoot {
     // No hot reload on file changes: reloading mid-edit has crashed
@@ -23,26 +22,34 @@ ShellRoot {
     // lock-failure screen. Apply changes with $mod+Shift+c instead.
     settings.watchFiles: false
 
-    Bar {}
-    CommandCenter {}
-    ClipboardMenu {}
-    NetworkMenu {}
-    BatteryMenu {}
-    CalendarMenu {}
-    QuickSettings {}
+    // Every tab exists once, here; the grown screen's Island adopts it and
+    // hands it back to this holder when it collapses.
+    Item {
+        visible: false
+        Panel { id: sharedPanel }
+    }
+
+    Variants {
+        model: Quickshell.screens
+        delegate: Spacer {}
+    }
+    Variants {
+        model: Quickshell.screens
+        delegate: Island { panel: sharedPanel }
+    }
+
     NotificationToasts {}
     Osd {}
     LockScreen {}
 
-    // `qs ipc call popup toggle <name>` — quicksettings ($mod+n), network,
-    // battery, calendar. Opens on the focused monitor. "bluetooth" and
-    // "notifications" still work: they're sections of network and calendar.
+    // `qs ipc call popup toggle <name>` — an island tab (system, calendar,
+    // notifications, network, run, clipboard) or an old popup name
+    // (quicksettings/battery → system, bluetooth → network; see
+    // island/routes.js). Opens on the focused monitor.
     IpcHandler {
         target: "popup"
-        function toggle(name: string): void {
-            PopupState.toggle({ bluetooth: "network", notifications: "calendar" }[name] || name)
-        }
-        function close(): void { PopupState.close() }
+        function toggle(name: string): void { IslandState.toggle(name) }
+        function close(): void { IslandState.close() }
     }
 
     // `qs ipc call vpn toggle mullvad` — connect/disconnect a VPN provider
