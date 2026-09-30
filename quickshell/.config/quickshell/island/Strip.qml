@@ -1,12 +1,13 @@
-// The collapsed island: workspaces │ clock │ status, in one row.
-//  - workspaces as tmux-style text, the focused one inverted, urgent red
-//  - date and time, yyyy-MM-dd HH:mm:ss (click: calendar tab)
-//  - status (click: system tab): the screen recording while one runs
-//    (click stops it), weather, network, battery, and ● while
-//    notifications are unread (click: notifications tab). The status
-//    carries what needs attention the way the old ≡ icon did: red when
-//    offline, on very weak wi-fi or a nearly empty battery; amber when
-//    merely weak/low or a tray app wants attention.
+// The collapsed island: only what's needed at a glance.
+//  - left: workspaces as tmux-style text, the focused one inverted, urgent red
+//  - center: date and time, yyyy-MM-dd HH:mm:ss (click: calendar tab)
+//  - right: nothing, unless something wants attention —
+//      offline (red) / weak wi-fi (amber), battery % at 30% or below on
+//      battery (amber, red at 15%), "tray" when a tray app asks for
+//      attention, the screen recording while one runs (click stops it),
+//      and ● while notifications are unread (click: notifications tab)
+// Everything else (network name, VPN, full battery, weather) lives in the
+// tabs. Clicking anywhere else on the strip opens the system tab.
 import Quickshell
 import Quickshell.I3
 import Quickshell.Services.SystemTray
@@ -23,29 +24,23 @@ Item {
     implicitHeight: 28
 
     readonly property real pct: UPower.displayDevice.percentage * 100
-    readonly property bool hasBattery: UPower.displayDevice.isLaptopBattery
-    readonly property bool onBattery: hasBattery
+    readonly property bool onBattery: UPower.displayDevice.isLaptopBattery
         && UPower.displayDevice.state !== UPowerDeviceState.Charging
         && UPower.displayDevice.state !== UPowerDeviceState.FullyCharged
+    readonly property bool offline: NetworkState.kind === "none"
     readonly property bool weakWifi: NetworkState.kind === "wifi" && NetworkState.signal < 50
-    readonly property color attention: {
-        if (NetworkState.kind === "none" || (weakWifi && NetworkState.signal < 25) || (onBattery && pct <= 15))
-            return Colors.red
-        if (weakWifi || (onBattery && pct <= 30)
-                || SystemTray.items.values.some(i => i.status === Status.NeedsAttention))
-            return Colors.amber
-        return Colors.gray2
-    }
-    readonly property string netLabel: {
-        const p = NetworkState.primary
-        if (!p || !p.connected) return "offline"
-        const name = p.type === "wifi" ? p.connection : p.type === "wwan" ? "mobile" : "wired"
-        return NetworkState.activeVpns.length ? name + "·vpn" : name
-    }
+    readonly property bool lowBattery: onBattery && pct <= 30
+    readonly property bool trayAttention: SystemTray.items.values.some(i => i.status === Status.NeedsAttention)
 
     component Seg: MonoText {
         font.pixelSize: 13
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+    }
+
+    // the strip's empty space: system tab
+    MouseArea {
+        anchors.fill: parent
+        onClicked: IslandState.toggle("system", strip.screen)
     }
 
     // workspaces
@@ -84,7 +79,7 @@ Item {
         }
     }
 
-    // clock
+    // date and time
     Seg {
         id: clock
         anchors.centerIn: parent
@@ -107,13 +102,28 @@ Item {
         }
     }
 
-    // status
+    // alerts only
     Row {
-        id: status
         anchors.right: parent.right
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
+        spacing: 10
+
+        Seg {
+            visible: strip.offline || strip.weakWifi
+            color: strip.offline || NetworkState.signal < 25 ? Colors.red : Colors.amber
+            text: strip.offline ? "offline" : "weak wi-fi"
+        }
+        Seg {
+            visible: strip.lowBattery
+            color: strip.pct <= 15 ? Colors.red : Colors.amber
+            text: Math.round(strip.pct) + "%"
+        }
+        Seg {
+            visible: strip.trayAttention
+            color: Colors.amber
+            text: "tray"
+        }
 
         // only while ~/.local/bin/screenrec records; click to stop
         Item {
@@ -126,18 +136,18 @@ Item {
                 id: recRow
                 spacing: 4
 
-            Seg {
-                font.pixelSize: 11
-                color: Colors.red
-                text: "●"
-                SequentialAnimation on opacity {
-                    running: RecorderState.recording
-                    loops: Animation.Infinite
-                    NumberAnimation { to: 0.3; duration: 700 }
-                    NumberAnimation { to: 1; duration: 700 }
+                Seg {
+                    font.pixelSize: 11
+                    color: Colors.red
+                    text: "●"
+                    SequentialAnimation on opacity {
+                        running: RecorderState.recording
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 0.3; duration: 700 }
+                        NumberAnimation { to: 1; duration: 700 }
+                    }
                 }
-            }
-            Seg { color: Colors.red; text: RecorderState.elapsedText() }
+                Seg { color: Colors.red; text: RecorderState.elapsedText() }
             }
 
             MouseArea {
@@ -145,43 +155,6 @@ Item {
                 anchors.margins: -4
                 cursorShape: Qt.PointingHandCursor
                 onClicked: RecorderState.stop()
-            }
-        }
-
-        Item {
-            implicitWidth: statusRow.implicitWidth
-            implicitHeight: statusRow.implicitHeight
-            anchors.verticalCenter: parent.verticalCenter
-
-            Row {
-                id: statusRow
-                spacing: 8
-
-                Row {
-                    visible: WeatherState.available
-                    spacing: 3
-                    anchors.verticalCenter: parent.verticalCenter
-                    Icon {
-                        text: WeatherState.glyph
-                        color: Colors.gray2
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Seg { color: Colors.gray2; text: WeatherState.temp }
-                }
-                Seg { color: strip.attention === Colors.gray2 ? Colors.gray2 : strip.attention; text: strip.netLabel }
-                Seg {
-                    visible: strip.hasBattery
-                    color: strip.onBattery && strip.pct <= 15 ? Colors.red
-                        : strip.onBattery && strip.pct <= 30 ? Colors.amber : Colors.gray2
-                    text: Math.round(strip.pct) + "%"
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                anchors.margins: -4
-                cursorShape: Qt.PointingHandCursor
-                onClicked: IslandState.toggle("system", strip.screen)
             }
         }
 

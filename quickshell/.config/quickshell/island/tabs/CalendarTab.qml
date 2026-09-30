@@ -1,7 +1,7 @@
 // The island's calendar tab (click the clock): a month grid with ISO week
 // numbers, Monday first (the math is in island/calendar.js): ‹ › or the
 // scroll wheel change month, the title jumps back to today, and it always
-// opens on the current month.
+// opens on the current month. The current weather sits under the grid.
 import QtQuick
 import quickshell
 import "../../state"
@@ -148,5 +148,23 @@ Tab {
         text: Qt.formatDate(menu.today, "dddd").toLowerCase()
             + " · week " + Cal.isoWeek(menu.today).week
             + " · day " + Cal.dayOfYear(menu.today)
+    }
+
+    // current weather (state/WeatherState.qml), gone when stale
+    Row {
+        visible: WeatherState.available
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: 6
+
+        Icon {
+            anchors.verticalCenter: parent.verticalCenter
+            color: Colors.gray2
+            text: WeatherState.glyph
+        }
+        MonoText {
+            anchors.verticalCenter: parent.verticalCenter
+            color: Colors.gray2
+            text: WeatherState.temp + " " + WeatherState.desc + (WeatherState.data ? " · " + WeatherState.data.city.toLowerCase() : "")
+        }
     }
 }
