@@ -53,6 +53,24 @@ all, so `install.sh` downloads each straight from its project's latest
 GitHub release binary into `~/.local/bin` instead (skipped if already
 installed some other way — e.g. `lazydocker` via `go install`).
 
+### Checking a machine
+
+```
+./install.sh --doctor
+```
+
+Read-only: lists what `install.sh` would still install or link (via
+stow's dry run), links in `$HOME` left dangling by files since removed from
+a package (a normal `install.sh` run deletes those), and — inside sway —
+which session services aren't running. Exits 1 if anything failed.
+
+CI (`.github/workflows`) runs shellcheck and `fish --no-execute` over the
+repo on every push, and `./install.sh --ci` in fresh Fedora, Debian,
+Ubuntu 24.04 and Arch containers whenever the installer changes (and
+weekly): every package, the polkit agent, the release-binary tools and a
+full quickshell build — the parts that break when a distro renames or
+drops a package.
+
 ## .rice
 
 This repo owns *configs*; [`~/.rice`](https://github.com/piarn/.rice) owns
@@ -128,6 +146,14 @@ The bar's ≡ quick settings is the mouse-first glance of the same things
 (plus the tray, notifications and media), and its popups hold the deep
 views (enterprise/hidden Wi-Fi, VPN details, battery).
 
+Background services run as systemd user services under
+`dots-session.target` (`sway/.config/systemd/user`), started once sway has
+exported its environment and stopped when it exits: the polkit agent
+(`mate-polkit`, password prompts), swayidle (lock after 10 minutes idle and
+before sleep), cliphist, udiskie, the bluetooth agent, `layout-watch` and
+`qs-watchdog`. A dead one is restarted; `journalctl --user -u <name>` has
+its log, and `./install.sh --doctor` flags any that aren't running.
+
 If quickshell hangs or crashes, `qs-watchdog` restarts it within ~15s
 (re-locking if the session was locked) and keeps a hung instance's log
 under `~/.cache/qs-watchdog/`. `$mod+Shift+c` does the same by hand.
@@ -176,6 +202,42 @@ VPN profiles — which is where the NM-plugin extras' profiles show up.
 a sway bind. Adding another client: an extra whose `home/` puts a `Vpn.qml`
 (a `components/VpnProvider.qml`) under `~/.config/quickshell/extras/<name>/`;
 `state/ExtrasState.qml` loads it at startup.
+
+### backup
+
+`extras.sh enable backup` installs restic and a daily `backup.timer`
+snapshotting `~` (minus caches, Steam, toolchains, `node_modules` — see
+`extras/backup/home/.config/backup/excludes`), then keeps 7 daily, 4
+weekly and 12 monthly snapshots. Per machine, in `~/.config/backup/`:
+`env` (where to — a disk, `sftp:host:/path`, any restic backend — and
+what to keep) and a generated `password`: **keep a copy of it elsewhere**,
+the backup is unreadable without it. Then once: `backup init`.
+
+`backup` with no arguments runs a backup like the timer does; anything else
+goes to restic with the repository filled in: `backup snapshots`,
+`backup restore latest --target /tmp/r --include ~/notes`,
+`backup mount ~/mnt`. A failed run sends a notification.
+
+Extras can ship systemd timers (`home/.config/systemd/user/*.timer`);
+`extras.sh` enables them on `enable` and disables them on `disable`.
+
+## Git
+
+Commits and tags are signed with the ssh key named in
+`.gitconfig.identity.github` (`~/.ssh/keys/github`); for GitHub to show them
+as Verified, add that key's `.pub` once more under Settings → SSH keys as
+a **Signing key**. `git log --show-signature` verifies locally against
+`git/.config/git/allowed_signers`. A `.gitconfig.identity.work` should set
+its own `signingkey` (or `[commit] gpgsign = false`). Diffs go through
+delta (git and lazygit), with histogram diffs, zdiff3 conflict markers,
+rerere and prune-on-fetch on.
+
+## Toolchains
+
+[mise](https://mise.jdx.dev) (installed from its GitHub release) pins
+go/node/python/... per project: `mise use go@1.24` in a project writes a
+`mise.toml`, and fish switches versions on `cd` (`conf.d/mise.fish`).
+Outside a pinned project the distro's toolchains are used as before.
 
 ## Adding a package
 

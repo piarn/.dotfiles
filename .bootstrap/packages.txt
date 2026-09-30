@@ -7,8 +7,11 @@ tmux
 bat
 ripgrep
 unzip
+# delta: git's pager (git/.gitconfig) and lazygit's; binary is `delta`
+git-delta
 # app installs from .bootstrap/flatpaks.txt
 flatpak
+
 # apt/dnf package is fd-find; the binary it installs is fd on Fedora but
 # fdfind on Debian/Ubuntu (see fish/.../functions/_fzf_search_directory.fish),
 # so the command -v check below won't match on Fedora once already installed.

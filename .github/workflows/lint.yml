@@ -1,0 +1,29 @@
+# Static checks on every push: shellcheck over every sh/bash script in the
+# repo (found by shebang, so new scripts are covered without listing them)
+# and fish's own parser over the fish config.
+name: lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: |
+          mapfile -t scripts < <(
+            git ls-files | while IFS= read -r f; do
+              [ -f "$f" ] && head -n1 "$f" | grep -Eq '^#!.*\b(ba)?sh\b' && echo "$f"
+            done
+          )
+          printf '%s\n' "${scripts[@]}"
+          shellcheck --severity=warning --external-sources "${scripts[@]}"
+
+      - name: fish syntax
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq fish >/dev/null
+          git ls-files '*.fish' | xargs -n1 fish --no-execute

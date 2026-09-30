@@ -17,6 +17,7 @@ declare -A PACKAGE_BIN_OVERRIDES=(
     [pulseaudio-utils]=pactl
     [ripgrep]=rg
     [neovim]=nvim
+    [git-delta]=delta
 )
 
 # apt sometimes uses a differently-cased/named package than dnf's
@@ -179,8 +180,23 @@ install_rice() {
         # Keep .rice in step with .dots: fast-forward only, and a failure
         # (local edits in the way, diverged history, offline) never blocks the install.
         echo "==> updating .rice"
+        # sway/outputs.conf used to be tracked and is gitignored now: a
+        # clone from before that has it both tracked and locally modified,
+        # which makes the pull that untracks it refuse to run (and one that
+        # did run would delete it). Keep this machine's copy across the pull.
+        local outputs="$RICE_DIR/sway/outputs.conf" outputs_copy=""
+        if [ -f "$outputs" ]; then
+            outputs_copy=$(mktemp)
+            cp "$outputs" "$outputs_copy"
+            git -C "$RICE_DIR" checkout -q -- sway/outputs.conf 2>/dev/null || true
+        fi
         git -C "$RICE_DIR" pull --ff-only \
             || echo "warning: couldn't fast-forward $RICE_DIR; continuing with what's there" >&2
+        if [ -n "$outputs_copy" ]; then
+            mkdir -p "$(dirname "$outputs")"   # the pull may have removed sway/ with it
+            cp "$outputs_copy" "$outputs"
+            rm -f "$outputs_copy"
+        fi
     fi
     # sway/outputs.conf is per-machine (gitignored) and normally written by
     # apply-layout, which needs a running sway. Seed the laptop profile —
@@ -292,10 +308,35 @@ install_quickshell() {
     echo "$QUICKSHELL_VERSION" >"$QUICKSHELL_VERSION_FILE"
 }
 
+# The session's polkit agent (password prompts for privileged actions,
+# run by polkit-agent.service): mate-polkit, the one agent packaged under
+# the same name on Fedora, Debian/Ubuntu and Arch — Fedora no longer ships
+# polkit-gnome. Its binary is never on PATH (a different libexec dir per
+# distro), so it can't go through packages.txt's `command -v` check;
+# scripts/.local/bin/polkit-agent holds the list of places it can be.
+. "$DOTS_DIR/extras/lib.sh"
+
+polkit_agent_installed() {
+    grep -o '/usr/lib[a-z]*/[^ ]*-authentication-agent-1' "$DOTS_DIR/scripts/.local/bin/polkit-agent" \
+        | while IFS= read -r agent; do [ -x "$agent" ] && echo "$agent"; done | grep -q .
+}
+
+install_polkit_agent() {
+    polkit_agent_installed && return
+    echo "==> installing a polkit agent (mate-polkit)"
+    pkg_install mate-polkit -- mate-polkit -- mate-polkit
+}
+
+# Stowing new or changed unit files (sway/.config/systemd/user) doesn't
+# tell a running systemd --user about them.
+reload_user_units() {
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+}
+
 case "$(uname -m)" in
-    x86_64) RELEASE_ARCH=x86_64; YAZI_ARCH=x86_64-unknown-linux-gnu ;;
-    aarch64) RELEASE_ARCH=arm64; YAZI_ARCH=aarch64-unknown-linux-gnu ;;
-    *) RELEASE_ARCH=""; YAZI_ARCH="" ;;
+    x86_64) RELEASE_ARCH=x86_64; YAZI_ARCH=x86_64-unknown-linux-gnu; MISE_ARCH=x64 ;;
+    aarch64) RELEASE_ARCH=arm64; YAZI_ARCH=aarch64-unknown-linux-gnu; MISE_ARCH=arm64 ;;
+    *) RELEASE_ARCH=""; YAZI_ARCH=""; MISE_ARCH="" ;;
 esac
 
 # Installs $bin_name from the latest GitHub release of $repo whose asset
@@ -317,8 +358,11 @@ install_from_github_release() {
     fi
 
     echo "==> installing $bin_name from github.com/$repo (latest release)"
-    local url
-    url=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" \
+    # CI runners share IPs, so unauthenticated API calls hit GitHub's rate
+    # limit there; use its token when there is one.
+    local url auth=()
+    [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
+    url=$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/$repo/releases/latest" \
         | grep -o "\"browser_download_url\": *\"[^\"]*${asset_pattern}[^\"]*\"" \
         | head -1 \
         | sed -E 's/.*"(https[^"]+)"/\1/')
@@ -372,7 +416,7 @@ install_satty() {
 # sets) — quickshell/components/Icon.qml pins it to its "Regular" named
 # instance so weight/fill don't drift to an arbitrary axis position.
 install_material_symbols() {
-    if fc-list 2>/dev/null | grep -q "Material Symbols Outlined"; then
+    if fc-list 2>/dev/null | grep "Material Symbols Outlined" >/dev/null; then
         return
     fi
     echo "==> installing Material Symbols Outlined (icons for quickshell)"
@@ -426,6 +470,15 @@ install_lazydocker() {
     install_from_github_release lazydocker jesseduffield/lazydocker "Linux_${RELEASE_ARCH}.tar.gz" lazydocker
 }
 
+# mise: per-project language toolchains (go, node, python, flutter, ...)
+# pinned in each project's mise.toml / .tool-versions, activated by
+# fish/conf.d/mise.fish. Only Arch packages it, so it comes from GitHub
+# releases like lazygit. The asset pattern matches just the glibc tarball
+# (not -musl, .tar.zst or .sig).
+install_mise() {
+    install_from_github_release mise jdx/mise "linux-${MISE_ARCH}.tar.gz" mise
+}
+
 install_tpm() {
     local tpm_dir="$HOME/.tmux/plugins/tpm"
     if [ -d "$tpm_dir" ]; then
@@ -476,6 +529,7 @@ preflight() {
     [ "$(uname -m)" = x86_64 ] || [ "$(uname -m)" = aarch64 ] \
         || problems+=("unsupported CPU architecture $(uname -m) (yazi/lazygit/lazydocker/satty release binaries)")
     command -v npm >/dev/null 2>&1 || missing+=(nodejs npm)
+    polkit_agent_installed || missing+=(mate-polkit)
     if [ "$pm" = apt ] && ! python3 -c 'import venv, ensurepip' >/dev/null 2>&1; then
         missing+=(python3-venv)
     fi
@@ -504,7 +558,7 @@ preflight() {
     done
 
     # .rice is cloned over ssh, so a working key matters up front.
-    if [ ! -d "$RICE_DIR/.git" ]; then
+    if [ ! -d "$RICE_DIR/.git" ] && [ "$MODE" != ci ]; then
         GIT_TERMINAL_PROMPT=0 git ls-remote "$RICE_REPO" HEAD >/dev/null 2>&1 \
             || problems+=("cannot read $RICE_REPO (ssh key for github.com set up?)")
     fi
@@ -517,8 +571,164 @@ preflight() {
     echo "==> preflight OK"
 }
 
+
+# Symlinks in $HOME that point into ~/.dots or ~/.rice at a file that no
+# longer exists — left behind whenever a file is deleted or renamed in a
+# package, since stow only ever adds links. One "link -> target" per line.
+dangling_links() {
+    { find "$HOME" -maxdepth 1 -xtype l -printf '%p -> %l\n'
+      find "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share/applications" -xtype l -printf '%p -> %l\n'
+    } 2>/dev/null | grep -E '\.(dots|rice)/' || true
+}
+
+prune_dangling_links() {
+    local line
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        echo "==> removing dangling link ${line}"
+        rm -f -- "${line%% -> *}"
+    done < <(dangling_links)
+}
+
+# Read-only health check of an installed machine (`./install.sh --doctor`):
+# what install.sh would still change, plus the session pieces that can
+# break quietly after it ran (a service that died, a link that dangles).
+# Never installs, links or restarts anything; exits 1 if anything failed.
+doctor() {
+    local fails=0 warns=0 pkg name out missing=()
+    local g="" r="" y="" n=""
+    [ -t 1 ] && { g=$'\033[32m'; r=$'\033[31m'; y=$'\033[33m'; n=$'\033[0m'; }
+    ok() { printf '  %sok%s    %s\n' "$g" "$n" "$*"; }
+    bad() { printf '  %sFAIL%s  %s\n' "$r" "$n" "$*"; fails=$((fails + 1)); }
+    warn() { printf '  %swarn%s  %s\n' "$y" "$n" "$*"; warns=$((warns + 1)); }
+
+    echo "packages"
+    mapfile -t missing < <(missing_packages)
+    if [ ${#missing[@]} -eq 0 ]; then ok "packages.txt"; else bad "not installed: ${missing[*]}"; fi
+    polkit_agent_installed && ok "polkit agent" || bad "no polkit agent (mate-polkit)"
+    for name in yazi satty lazygit lazydocker mise; do
+        command -v "$name" >/dev/null 2>&1 && ok "$name" || bad "$name not on PATH"
+    done
+    if [ "$(cat "$QUICKSHELL_VERSION_FILE" 2>/dev/null)" = "$QUICKSHELL_VERSION" ] && [ -x "$LOCAL_BIN/quickshell" ]; then
+        ok "quickshell $QUICKSHELL_VERSION"
+    else
+        bad "quickshell isn't the pinned $QUICKSHELL_VERSION build"
+    fi
+    if command -v flatpak >/dev/null 2>&1; then
+        missing=()
+        while IFS= read -r name; do
+            case "$name" in ''|'#'*) continue ;; esac
+            flatpak info "$name" >/dev/null 2>&1 || missing+=("$name")
+        done <"$BOOTSTRAP_DIR/flatpaks.txt"
+        if [ ${#missing[@]} -eq 0 ]; then ok "flatpaks.txt"; else bad "flatpaks not installed: ${missing[*]}"; fi
+    fi
+    fc-list 2>/dev/null | grep "Material Symbols Outlined" >/dev/null && ok "Material Symbols font" || bad "Material Symbols font missing"
+    [ -f /etc/pam.d/quickshell-lock ] && ok "lock screen PAM service" || bad "/etc/pam.d/quickshell-lock missing (lock screen can't unlock)"
+
+    echo "links"
+    local fails_before=$fails
+    # stow's dry run lists exactly the links a real run would still make
+    # (LINK:) and the files it would refuse to replace (* cannot stow ...)
+    local stow_dirs=() dir
+    for pkg in "${PACKAGES[@]}"; do stow_dirs+=("$DOTS_DIR:$pkg"); done
+    while IFS= read -r name; do
+        [ -d "$DOTS_DIR/extras/$name/home" ] && stow_dirs+=("$DOTS_DIR/extras/$name:home")
+    done < <(grep -v '^\s*$' "$DOTS_DIR/.extras-enabled" 2>/dev/null)
+    for dir in "${stow_dirs[@]}"; do
+        pkg=${dir##*:}; dir=${dir%:*}
+        out=$(stow -n -v --no-folding -d "$dir" -t "$HOME" "$pkg" 2>&1 || true)
+        name=${dir#"$DOTS_DIR"}; name=${name#/}; name=${name:+$name/}$pkg
+        if grep -q '^LINK:' <<<"$out"; then
+            bad "$name: not linked: $(sed -n 's/^LINK: \([^ ]*\) =>.*/~\/\1/p' <<<"$out" | tr '\n' ' ')(run install.sh)"
+        elif grep -q 'cannot stow' <<<"$out"; then
+            bad "$name: conflicts: $(sed -n 's/.*over existing target \([^ ]*\).*/~\/\1/p' <<<"$out" | tr '\n' ' ')"
+        fi
+    done
+    local dangling
+    dangling=$(dangling_links)
+    if [ -n "$dangling" ]; then
+        bad "dangling links into ~/.dots or ~/.rice (install.sh removes them):"
+        sed 's/^/          /' <<<"$dangling"
+    fi
+    [ "$fails" -gt "$fails_before" ] || ok "every package and enabled extra is linked"
+
+    echo "rice"
+    if [ -d "$RICE_DIR/.git" ]; then
+        ok "$RICE_DIR"
+        [ -e "$RICE_DIR/sway/outputs.conf" ] && ok "sway/outputs.conf" || bad "$RICE_DIR/sway/outputs.conf missing (sway's include dangles)"
+    else
+        bad "$RICE_DIR not cloned"
+    fi
+
+    echo "session"
+    if swaymsg -t get_version >/dev/null 2>&1; then
+        pgrep -x quickshell >/dev/null && ok "quickshell running" || bad "quickshell not running"
+        local units
+        units=$(systemctl --user show -p Wants --value dots-session.target 2>/dev/null)
+        if ! systemctl --user -q is-active dots-session.target; then
+            bad "dots-session.target not active (log out and back in, or: systemctl --user restart dots-session.target)"
+        fi
+        for name in $units; do
+            if systemctl --user -q is-active "$name"; then
+                ok "$name"
+            else
+                bad "$name $(systemctl --user show -p ActiveState --value "$name") (journalctl --user -u $name)"
+            fi
+        done
+    else
+        warn "not inside sway; skipped the session services"
+    fi
+
+    echo "repos"
+    for dir in "$DOTS_DIR" "$RICE_DIR"; do
+        [ -d "$dir/.git" ] || continue
+        if [ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]; then
+            warn "$dir has uncommitted changes"
+        else
+            ok "$dir clean"
+        fi
+    done
+
+    echo
+    if [ "$fails" -gt 0 ]; then
+        echo "$fails problem(s), $warns warning(s)"
+        return 1
+    fi
+    echo "all good ($warns warning(s))"
+}
+
+# --ci (.github/workflows/ci.yml, as root in a fresh distro container):
+# everything that installs from a package manager or a download, so a
+# renamed/dropped package or a broken quickshell build fails there first.
+# Skips what needs a real user session or credentials: the ssh-cloned
+# .rice, flatpaks (system flatpak doesn't run in a container), PAM, and
+# the stow/tmux/LSP steps that depend on .rice being present.
+ci() {
+    preflight
+    install_packages
+    install_polkit_agent
+    install_quickshell
+    install_node
+    install_yazi
+    install_satty
+    install_lazygit
+    install_lazydocker
+    install_mise
+    "$LOCAL_BIN/quickshell" --version
+    polkit_agent_installed
+}
+
+MODE=install
+case "${1:-}" in
+    --doctor) doctor; exit ;;
+    --ci) MODE=ci; ci; exit ;;
+    '') ;;
+    *) echo "usage: $0 [--doctor | --ci]" >&2; exit 1 ;;
+esac
+
 preflight
 install_packages
+install_polkit_agent
 install_quickshell
 install_flatpaks
 install_node
@@ -529,6 +739,7 @@ install_yazi
 install_satty
 install_lazygit
 install_lazydocker
+install_mise
 cd "$DOTS_DIR"
 
 for pkg in "${PACKAGES[@]}"; do
@@ -539,7 +750,9 @@ done
 # Opt-in extras (extras/extras.sh) stay out of PACKAGES; this only re-links
 # the ones already enabled on this machine, so new files in them land too.
 "$DOTS_DIR/extras/extras.sh" restow
+prune_dangling_links
 
+reload_user_units
 install_fish_plugins
 install_kde_flatpak_theme
 install_tpm

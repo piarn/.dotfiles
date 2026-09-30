@@ -1,0 +1,48 @@
+# Runs install.sh --ci in a fresh container per supported distro: installs
+# packages.txt, the polkit agent, the GitHub-release tools and mise, and
+# builds the pinned quickshell — the parts that break when a distro renames
+# or drops a package. Weekly as well as on changes, since the distros move
+# even when this repo doesn't.
+name: install
+
+on:
+  push:
+    paths:
+      - install.sh
+      - .bootstrap/**
+      - extras/lib.sh
+      - scripts/.local/bin/polkit-agent
+      - .github/workflows/install.yml
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - fedora:latest
+          - debian:trixie
+          - ubuntu:24.04 # Qt 6.4: exercises the aqtinstall Qt fallback
+          - archlinux:latest
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    timeout-minutes: 60
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      # the installer's own prerequisites (see preflight in install.sh)
+      - name: prerequisites
+        run: |
+          if command -v dnf; then dnf install -y sudo git python3 curl
+          elif command -v apt-get; then apt-get update && apt-get install -y sudo git python3 curl ca-certificates
+          else pacman -Syu --noconfirm sudo git python curl
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: install.sh --ci
+        run: ./install.sh --ci
