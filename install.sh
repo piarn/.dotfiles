@@ -540,7 +540,12 @@ preflight() {
                 avail=$(apt-cache policy "$name" 2>/dev/null | awk '/Candidate:/ {print $2}')
                 [ -n "$avail" ] && [ "$avail" != "(none)" ] ;;
             dnf)
-                dnf -q list --available "$pkg" >/dev/null 2>&1 ;;
+                # never let it ask anything: a repo whose signing key isn't
+                # imported yet (the tailscale/netbird extras' repos) prompts
+                # "Is this ok [y/N]", which sits there invisibly behind the
+                # >/dev/null. Declining skips just that repo's key import;
+                # the lookup still answers from the other repos.
+                dnf -q --assumeno list --available "$pkg" </dev/null >/dev/null 2>&1 ;;
             pacman)
                 name="${ARCH_NAME_OVERRIDES[$pkg]:-$pkg}"
                 pacman -Si "$name" >/dev/null 2>&1 ;;
