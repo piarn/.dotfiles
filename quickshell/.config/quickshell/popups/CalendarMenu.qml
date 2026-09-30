@@ -14,7 +14,7 @@ import "calendar/calendar.js" as Cal
 BarPopup {
     id: menu
     name: "calendar"
-    fixedWidth: 360
+    fixedWidth: 300
     topCenter: true
 
     property date today: new Date()
@@ -22,7 +22,7 @@ BarPopup {
     property int month: today.getMonth()
 
     readonly property var grid: Cal.monthGrid(year, month)
-    readonly property int cell: 34
+    readonly property int cell: 30
 
     function shift(months) {
         const d = new Date(year, month + months, 1)
