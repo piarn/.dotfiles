@@ -62,17 +62,22 @@ before restart), Magic SysRq (the keyboard has no Print key), a manual
 - New `scripts/.local/bin/dots-lock`, the only thing that locks:
   `$mod+Escape`, swayidle (timeout and before-sleep), the command
   center's `:lock` action, and the watchdog's re-lock.
-- It calls `qs ipc call lock lock`, then waits up to 2s for
-  `quickshell-locked` to read `1`. If it doesn't, it runs `swaylock -f`
-  (forks once locked, so `swayidle -w` before-sleep still waits for the
-  lock) with the theme's black from `~/.rice` as the background.
-- Already locked (`quickshell-locked` is `1`): nothing to do.
+- It calls `qs ipc call lock lock`, then waits up to 2s for a new IPC
+  function, `lock.isLocked()`, to print `true`. If it doesn't, it runs
+  `swaylock -f` (forks once locked, so `swayidle -w` before-sleep still
+  waits for the lock) with the theme's black from `~/.rice` as the
+  background. After swaylock exits it resets `quickshell-locked` to 0, so
+  a quickshell restarting later doesn't lock again from a stale flag.
+- Already locked (swaylock running, or `isLocked` is `true`): nothing to do.
+- The watchdog's re-lock after a restart runs it with a 10s wait, since a
+  fresh quickshell needs time to load and lock itself from the flag.
 - swaylock goes in `packages.txt` (same name on dnf/apt/pacman).
 
 ### 3. sway: safe-mode retry (sway-session)
 
-- `sway-session` moves into the repo (`sway/sway-session` plus
-  `sway/sway.desktop`, not stowed) and `install.sh` installs both with
+- `sway-session` moves into the repo (`.bootstrap/sway-session` plus
+  `.bootstrap/sway.desktop`: not a stow package, which would link them
+  into `~`) and `install.sh` installs both with
   sudo when they differ, like `/etc/pam.d/quickshell-lock`.
 - It runs sway without `exec`. If sway exits non-zero within 10 seconds
   of starting, it runs sway once more with the distro's stock config
@@ -96,8 +101,8 @@ before restart), Magic SysRq (the keyboard has no Print key), a manual
     than discarded), then restart quickshell.
   - `sway-reload`: `swaymsg reload` through the found socket.
   - `sway-exit`: end the sway session (back to GDM).
-  - `unlock`: if locked with no working prompt, start swaylock so there
-    is one.
+  - `lock-prompt`: if locked with no working prompt, start swaylock so
+    there is one.
 - README gets a short "When things break" section listing these.
 
 ## Testing
