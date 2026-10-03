@@ -387,6 +387,7 @@ declare -A RELEASE_VERSIONS=(
     [lazygit]=v0.65.1
     [lazydocker]=v0.25.2
     [mise]=v2026.9.18
+    [tree-sitter]=v0.27.0
 )
 declare -A RELEASE_REPOS=(
     [yazi]=sxyazi/yazi
@@ -394,6 +395,7 @@ declare -A RELEASE_REPOS=(
     [lazygit]=jesseduffield/lazygit
     [lazydocker]=jesseduffield/lazydocker
     [mise]=jdx/mise
+    [tree-sitter]=tree-sitter/tree-sitter
 )
 RELEASE_VERSION_DIR="$HOME/.local/share/dots-release-versions"
 
@@ -474,6 +476,18 @@ install_from_github_release() {
     fi
     mkdir -p "$RELEASE_VERSION_DIR"
     echo "$version" >"$marker"
+}
+
+# The CLI nvim-treesitter's main branch builds parsers with (0.26.1+; Debian
+# and Ubuntu package a far older one). Skipped where a distro package already
+# put one on PATH, like the other release tools.
+install_tree_sitter() {
+    local arch=""
+    case "$(uname -m)" in
+        x86_64) arch=x64 ;;
+        aarch64) arch=arm64 ;;
+    esac
+    install_from_github_release tree-sitter "${arch:+tree-sitter-cli-linux-$arch.zip}" tree-sitter
 }
 
 install_yazi() {
@@ -727,7 +741,7 @@ doctor() {
     mapfile -t missing < <(missing_packages)
     if [ ${#missing[@]} -eq 0 ]; then ok "packages.txt"; else bad "not installed: ${missing[*]}"; fi
     polkit_agent_installed && ok "polkit agent" || bad "no polkit agent (mate-polkit)"
-    for name in yazi satty lazygit lazydocker mise; do
+    for name in yazi satty lazygit lazydocker mise tree-sitter; do
         if release_current "$name"; then
             ok "$name ${RELEASE_VERSIONS[$name]}"
         elif [ -e "$LOCAL_BIN/$name" ]; then
@@ -902,6 +916,7 @@ ci() {
     install_lazygit
     install_lazydocker
     install_mise
+    install_tree_sitter
     "$LOCAL_BIN/quickshell" --version
     polkit_agent_installed
 }
@@ -913,7 +928,7 @@ ci() {
 outdated() {
     local name latest status=0 auth=()
     [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
-    for name in yazi satty lazygit lazydocker mise; do
+    for name in yazi satty lazygit lazydocker mise tree-sitter; do
         latest=$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/${RELEASE_REPOS[$name]}/releases/latest" \
             | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
         if [ -z "$latest" ]; then
@@ -960,6 +975,7 @@ install_satty
 install_lazygit
 install_lazydocker
 install_mise
+install_tree_sitter
 cd "$DOTS_DIR"
 
 for pkg in "${PACKAGES[@]}"; do

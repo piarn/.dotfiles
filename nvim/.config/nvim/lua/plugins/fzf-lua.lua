@@ -1,14 +1,18 @@
+-- The finder behind ␣␣ ␣/ ␣: ␣, and the ␣f group (config/keymaps.lua).
 return {
   "ibhagwan/fzf-lua",
   cmd = "FzfLua",
-  keys = {
-    { "<leader>ff", "<cmd>FzfLua files<cr>", desc = "Find files" },
-    { "<leader>fg", "<cmd>FzfLua live_grep<cr>", desc = "Live grep" },
-    { "<leader>fb", "<cmd>FzfLua buffers<cr>", desc = "Buffers" },
-    { "<leader>fh", "<cmd>FzfLua helptags<cr>", desc = "Help tags" },
-    { "<leader>fd", "<cmd>FzfLua diagnostics_document<cr>", desc = "Diagnostics" },
-    { "<leader>fs", "<cmd>FzfLua lsp_document_symbols<cr>", desc = "Document symbols" },
-    { "<leader>fr", "<cmd>FzfLua resume<cr>", desc = "Resume last picker" },
+  dependencies = { "nvim-tree/nvim-web-devicons" },
+  init = function()
+    -- every "pick one" prompt (code actions, the debugger's configs, ...) in
+    -- fzf too; fzf-lua itself only loads the first time one comes up
+    vim.ui.select = function(...)
+      require("fzf-lua").register_ui_select()
+      return vim.ui.select(...)
+    end
+  end,
+  opts = {
+    -- fzf colors come from FZF_DEFAULT_OPTS (~/.rice fzf template), same as the shell
+    winopts = { border = "single", preview = { border = "single" } },
   },
-  opts = {},
 }

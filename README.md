@@ -52,7 +52,8 @@ package name (`ripgrep`→`rg`, `neovim`→`nvim`, `wl-clipboard`→`wl-copy`,
 `install.sh` handles both via small override maps near the top.
 
 `yazi`, `lazygit`, `lazydocker`, `satty` and `mise` aren't packaged for
-apt/dnf, so `install.sh` downloads each from its project's GitHub releases
+apt/dnf (and `tree-sitter`, which nvim builds its parsers with, is too old on
+Debian/Ubuntu), so `install.sh` downloads each from its project's GitHub releases
 into `~/.local/bin` instead, pinned to the tag in `RELEASE_VERSIONS` (bump
 it and re-run to upgrade; skipped if installed some other way — e.g.
 `lazydocker` via `go install`).
@@ -112,6 +113,14 @@ whichever screen layout matches what's connected
 Vim-style modes, one session per "case" with persistence across reboots, a
 session/window/pane tree popup, and direct Alt binds — see
 [`tmux/README.md`](tmux/README.md).
+
+## nvim
+
+A terminal Zed whose editing language is vim: Space-leader grammar mirroring
+tmux and sway (one file, `lua/config/keymaps.lua`), toggleable tree / outline /
+problems / terminal panels, run-build-test per language, a debugger with a
+modal stepping layer, and hardtime breaking hjkl habits — see
+[`nvim/README.md`](nvim/README.md).
 
 ## Desktop
 

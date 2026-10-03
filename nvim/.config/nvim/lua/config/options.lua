@@ -11,6 +11,9 @@ opt.smartcase = true
 
 opt.scrolloff = 8
 opt.signcolumn = "yes"
+opt.cursorline = true
+opt.laststatus = 3 -- one statusline for the whole screen
+opt.showmode = false -- lualine shows it
 
 opt.undofile = true
 
