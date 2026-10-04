@@ -1,5 +1,6 @@
 // What ~/.rice offers and what's active: themes (with their palette and
-// wallpaper, for previews), screen layouts, and the current pick of each.
+// wallpaper, for previews), screen layouts (and which of them the connected
+// outputs satisfy), and the current pick of each.
 // Read with one python3 pass (tomllib) on refresh() — run once at startup
 // (Component.onCompleted) so the command center's `:theme`/`:layout` mode
 // has data without needing anything to open first; applying goes through
@@ -18,6 +19,7 @@ Singleton {
 
     property var themes: []     // [{id, name, colors: {role: "#rrggbb"}, wallpaper}]
     property var layouts: []    // [id]
+    property var usableLayouts: []   // [id] whose `# requires:` outputs are all connected
     property string currentTheme: ""
     property string currentLayout: ""
 
@@ -38,7 +40,7 @@ Singleton {
     Process {
         id: readProc
         command: ["python3", "-c", `
-import json, os, sys, tomllib
+import json, os, re, subprocess, sys, tomllib
 d = sys.argv[1]
 def first(p):
     try:
@@ -55,7 +57,23 @@ for t in sorted(os.listdir(d + "/themes")):
     wall = next((p + "/" + f for f in sorted(os.listdir(p)) if f.startswith("wallpaper.")), "")
     themes.append({"id": t, "name": doc.get("name", t), "colors": doc.get("colors", {}), "wallpaper": wall})
 layouts = sorted(f[:-5] for f in os.listdir(d + "/layouts") if f.endswith(".conf"))
-print(json.dumps({"themes": themes, "layouts": layouts,
+# same matching as ~/.rice/bin/apply-layout: connector name or "make model serial"
+connected = set()
+try:
+    for o in json.loads(subprocess.run(["swaymsg", "-t", "get_outputs"], capture_output=True, text=True).stdout):
+        connected.add(o["name"])
+        if o.get("make") and o.get("model") and o.get("serial"):
+            connected.add(f"{o['make']} {o['model']} {o['serial']}")
+except (OSError, ValueError):
+    pass
+def requires(l):
+    for line in open(d + "/layouts/" + l + ".conf"):
+        m = re.match(r"#\\s*requires:\\s*(.+)$", line.strip(), re.I)
+        if m:
+            return {x.strip() for x in m.group(1).split(",") if x.strip()}
+    return set()
+usable = [l for l in layouts if requires(l) and requires(l) <= connected]
+print(json.dumps({"themes": themes, "layouts": layouts, "usable": usable,
                   "theme": first(d + "/themes/current"), "layout": first(d + "/layouts/current")}))
 `, dir]
         stdout: StdioCollector {
@@ -64,6 +82,7 @@ print(json.dumps({"themes": themes, "layouts": layouts,
                     const r = JSON.parse(text)
                     root.themes = r.themes
                     root.layouts = r.layouts
+                    root.usableLayouts = r.usable
                     root.currentTheme = r.theme
                     root.currentLayout = r.layout
                 } catch (e) {

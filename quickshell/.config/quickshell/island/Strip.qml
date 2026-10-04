@@ -52,11 +52,12 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
 
         Repeater {
-            // "1".."5", then any other workspace that exists
+            // "1".."5", then any other workspace that exists — except
+            // `mirror`, the present layout's HDMI-only wl-mirror holder
             model: {
                 const names = ["1", "2", "3", "4", "5"]
                 for (const w of I3.workspaces.values)
-                    if (names.indexOf(w.name) < 0) names.push(w.name)
+                    if (names.indexOf(w.name) < 0 && w.name !== "mirror") names.push(w.name)
                 return names
             }
 
