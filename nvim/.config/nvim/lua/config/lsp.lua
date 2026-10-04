@@ -43,6 +43,28 @@ function M.setup()
     },
   })
 
+  -- jsonls/yamlls: schemas from SchemaStore (package.json, tsconfig,
+  -- GitHub workflows, compose files, ...), picked by file name
+  vim.lsp.config("jsonls", {
+    settings = {
+      json = {
+        schemas = require("schemastore").json.schemas(),
+        validate = { enable = true },
+      },
+    },
+  })
+
+  vim.lsp.config("yamlls", {
+    settings = {
+      yaml = {
+        -- yamlls' built-in store is off so SchemaStore.nvim's list is the only one
+        schemaStore = { enable = false, url = "" },
+        schemas = require("schemastore").yaml.schemas(),
+        keyOrdering = false,
+      },
+    },
+  })
+
   vim.lsp.config("gopls", {
     settings = {
       gopls = {

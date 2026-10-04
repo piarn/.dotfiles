@@ -12,6 +12,7 @@ return {
     dependencies = {
       "mason-org/mason.nvim",
       "neovim/nvim-lspconfig",
+      "b0o/SchemaStore.nvim", -- JSON/YAML schemas for jsonls and yamlls
     },
     -- Only servers no language extra installs; gopls, clangd, rust_analyzer
     -- and nim_langserver come from extras/<lang> (see config/lsp.lua).

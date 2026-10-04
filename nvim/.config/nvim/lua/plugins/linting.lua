@@ -8,6 +8,7 @@ return {
       go = { "golangcilint" },
       python = { "ruff" },
       sh = { "shellcheck" },
+      yaml = { "yamllint" }, -- extras/yaml
     }
 
     vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost", "InsertLeave" }, {

@@ -257,11 +257,13 @@ toolchain plus the editor tooling (nothing is linked into `$HOME`):
 | --- | --- |
 | `c` | gcc, clang, make, cmake, gdb, clangd |
 | `go` | Go, plus `gopls` and `dlv` via `go install` (into `$(go env GOPATH)/bin`) |
+| `json` | jq (nvim formats JSON with it) |
 | `lua` | Lua 5.4, LuaJIT, luarocks |
 | `nim` | Nim + nimble + `nimlangserver`; Fedora has no Nim package, so there it comes from choosenim into `~/.nimble/bin` (update: `choosenim update stable`) |
 | `node` | Node.js + npm |
 | `python` | Python 3 with pip/venv/headers, pipx, uv |
 | `rust` | rustc, cargo, rust-analyzer |
+| `yaml` | yq + yamllint (nvim formats/lints YAML with them); Debian/Ubuntu's `yq` is a different tool, so there only yamllint |
 | `zig` | Zig (packaged on Fedora/Arch; Debian/Ubuntu depends on the release) |
 
 ### backup
