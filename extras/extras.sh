@@ -68,6 +68,7 @@ extra_timers() {
     for t in "$EXTRAS_DIR/$1"/home/.config/systemd/user/*.timer; do
         [ -e "$t" ] && basename "$t"
     done
+    return 0
 }
 
 enable_timers() {

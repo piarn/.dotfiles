@@ -248,6 +248,22 @@ a sway bind. Adding another client: an extra whose `home/` puts a `Vpn.qml`
 (a `components/VpnProvider.qml`) under `~/.config/quickshell/extras/<name>/`;
 `state/ExtrasState.qml` loads it at startup.
 
+### Languages
+
+One extra per language, each just a `setup.sh` that installs the distro's
+toolchain plus the editor tooling (nothing is linked into `$HOME`):
+
+| Extra | What it adds |
+| --- | --- |
+| `c` | gcc, clang, make, cmake, gdb, clangd |
+| `go` | Go, plus `gopls` and `dlv` via `go install` (into `$(go env GOPATH)/bin`) |
+| `lua` | Lua 5.4, LuaJIT, luarocks |
+| `nim` | Nim + nimble + `nimlangserver`; Fedora has no Nim package, so there it comes from choosenim into `~/.nimble/bin` (update: `choosenim update stable`) |
+| `node` | Node.js + npm |
+| `python` | Python 3 with pip/venv/headers, pipx, uv |
+| `rust` | rustc, cargo, rust-analyzer |
+| `zig` | Zig (packaged on Fedora/Arch; Debian/Ubuntu depends on the release) |
+
 ### backup
 
 `extras.sh enable backup` installs restic and a daily `backup.timer`
