@@ -2,7 +2,9 @@
 . "$(dirname "$0")/lib.sh"
 
 # sway stub: SWAY_STUB fast-fail | slow-fail | ok | safe-ok (fails unless given -c)
+# SWAY_STUB_VERSION: what `sway --version` reports (default 1.12)
 stub sway '
+case "$1" in --version) echo "sway version ${SWAY_STUB_VERSION:-1.12}"; exit 0 ;; esac
 echo "sway $*" >>"$CALLS"
 echo "explicit-sync-off=${WLR_RENDER_NO_EXPLICIT_SYNC:-unset}" >>"$CALLS"
 case "$SWAY_STUB" in
@@ -19,9 +21,15 @@ S=$REPO/.bootstrap/sway-session
 : >"$CALLS"; SWAY_STUB=ok "$S"; rc=$?
 check "clean exit: sway run once" [ "$(grep -c '^sway' "$CALLS")" = 1 ]
 check "clean exit: status 0" [ "$rc" = 0 ]
-# wlroots 0.19's explicit-sync release path aborts sway (buffer->n_locks > 0
-# assertion) when e.g. a new kitty starts
-check "explicit sync disabled for sway" called "explicit-sync-off=1"
+# Explicit sync is what keeps NVIDIA frames from flickering, so it stays on
+# from sway 1.12 (wlroots 0.20) on ...
+check "sway 1.12: explicit sync left on" called "explicit-sync-off=unset"
+# ... but wlroots 0.19's explicit-sync release path aborts sway
+# (buffer->n_locks > 0 assertion) when e.g. a new kitty starts
+for v in 1.11 1.11-dev; do
+    : >"$CALLS"; SWAY_STUB=ok SWAY_STUB_VERSION=$v "$S"
+    check "sway $v: explicit sync disabled" called "explicit-sync-off=1"
+done
 
 : >"$CALLS"; SWAY_STUB=safe-ok "$S"; rc=$?
 check "fast failure: retried with the safe config" called "-c /safe/config"

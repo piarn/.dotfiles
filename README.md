@@ -1,4 +1,11 @@
-# .dotfiles
+```text
+   ██████╗  ██████╗ ████████╗███████╗
+   ██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝
+   ██║  ██║██║   ██║   ██║   ███████╗
+   ██║  ██║██║   ██║   ██║   ╚════██║
+██╗██████╔╝╚██████╔╝   ██║   ███████║
+╚═╝╚═════╝  ╚═════╝    ╚═╝   ╚══════╝
+```
 
 Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level
 directory (`bash`, `fish`, `foot`, ...) is a stow package whose contents
@@ -281,6 +288,17 @@ goes to restic with the repository filled in: `backup snapshots`,
 
 Extras can ship systemd timers (`home/.config/systemd/user/*.timer`);
 `extras.sh` enables them on `enable` and disables them on `disable`.
+
+### nvidia
+
+For sway on the proprietary NVIDIA driver. `extras.sh enable nvidia`
+makes sure sway is at least 1.12: on Fedora 44 (sway 1.11) it rebuilds
+Fedora's next-release sway package and installs it over the stock one.
+Older sways get explicit sync turned off by `sway-session` (wlroots 0.19
+aborts in it), and on NVIDIA that shows up as flickering or stale screen
+regions. `~/.local/state/sway.log`'s first line shows the sway version and
+whether explicit sync was off. To go back: `sudo dnf downgrade sway
+sway-config-upstream`.
 
 ## Git
 
