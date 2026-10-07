@@ -33,6 +33,8 @@ wlsunset
 udiskie
 slurp
 wl-clipboard
+# mirrors the laptop panel onto HDMI in the `present` screen layout
+wl-mirror
 swayidle
 swaylock
 brightnessctl

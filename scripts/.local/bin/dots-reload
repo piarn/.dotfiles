@@ -70,6 +70,15 @@ if [ -n "$quickshell$sway" ] && ! sway_config_ok; then
     quickshell=; sway=
 fi
 
+# Stow links file by file (--no-folding), so a QML file added since the
+# last install.sh isn't in ~/.config yet, and the restart below would load
+# a shell that references a type it can't find. Re-link first.
+if [ -n "$quickshell" ] && command -v stow >/dev/null 2>&1; then
+    dots=$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)
+    stow -d "$dots" -t "$HOME" --no-folding -R quickshell \
+        || echo "warning: re-linking quickshell failed; new files may be missing" >&2
+fi
+
 # Same as $mod+Shift+c: Colors.qml isn't file-watched, so quickshell only
 # picks it up fresh. SIGKILL because `qs kill` asks over IPC, which a hung
 # instance never answers; sway's exec_always brings it back on the reload.

@@ -14,4 +14,5 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup("plugins", {
   install = { colorscheme = { "habamax" } },
   checker = { enabled = false },
+  rocks = { enabled = false }, -- no plugin here needs luarocks
 })

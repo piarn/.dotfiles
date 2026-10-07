@@ -6,8 +6,11 @@
 //    opens the menu, middle click is the secondary action, wheel scrolls.
 //  - toggles: network (what traffic goes over, VPNs included; click for
 //    the network popup), bluetooth, keep awake, night
-//    light, power profile; the › on a tile opens that feature's full popup
-//    (bluetooth's is a section of the network popup)
+//    light, power profile, display; the › on a tile opens that feature's
+//    full popup (bluetooth's is a section of the network popup) — the
+//    display tile's instead expands the screen layout picker below the grid.
+//    Clicking the display tile mirrors the laptop onto HDMI (the `present`
+//    layout) or back to a second screen (`extend`) when HDMI is plugged in.
 //  - volume/mic/brightness sliders (middle click mutes, wheel steps); the
 //    chevron before volume/mic lists the output/input devices to pick from
 //  - media controls for the MPRIS player that's playing (or was last)
@@ -29,12 +32,15 @@ Tab {
 
     property string hoveredTitle: ""
     property string devicesShown: ""   // "" | "output" | "input"
+    property bool layoutsShown: false
     // Ruled grid: spacing -1 overlaps neighbouring tiles' rules into one.
     readonly property int tileWidth: (innerWidth + 1) / 2
 
     onOpened: {
         devicesShown = ""
+        layoutsShown = false
         BrightnessState.refresh()
+        RiceState.refresh()   // outputs may have been plugged in since
     }
 
     function toggleDevices(kind) {
@@ -56,6 +62,10 @@ Tab {
         if (p === PowerProfile.Performance) return "performance"
         return "balanced"
     }
+
+    readonly property bool canMirror: RiceState.usableLayouts.indexOf("present") >= 0
+        && RiceState.usableLayouts.indexOf("extend") >= 0
+    readonly property bool mirroring: RiceState.currentLayout === "present"
 
     function cycleProfile() {
         const order = [PowerProfile.PowerSaver, PowerProfile.Balanced]
@@ -218,6 +228,26 @@ Tab {
             active: PowerProfiles.profile !== PowerProfile.Balanced
             onToggled: menu.cycleProfile()
         }
+
+        ToggleTile {
+            width: menu.tileWidth
+            icon: menu.mirroring ? "\u{e0e2}" : "\u{e30c}"   // screen_share / desktop_windows
+            title: "Display"
+            subtitle: menu.mirroring ? "mirroring to hdmi"
+                : menu.canMirror ? RiceState.currentLayout + " · click to mirror"
+                : RiceState.currentLayout
+            active: menu.mirroring
+            hasDetail: true
+            onToggled: {
+                if (menu.canMirror) RiceState.applyLayout(menu.mirroring ? "extend" : "present")
+                else menu.layoutsShown = !menu.layoutsShown
+            }
+            onDetail: menu.layoutsShown = !menu.layoutsShown
+        }
+    }
+
+    LayoutList {
+        visible: menu.layoutsShown
     }
 
     Divider {}
