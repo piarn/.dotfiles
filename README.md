@@ -1,11 +1,12 @@
-```text
+<div align="center">
+<pre>
    ██████╗  ██████╗ ████████╗███████╗
    ██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝
    ██║  ██║██║   ██║   ██║   ███████╗
    ██║  ██║██║   ██║   ██║   ╚════██║
 ██╗██████╔╝╚██████╔╝   ██║   ███████║
-╚═╝╚═════╝  ╚═════╝    ╚═╝   ╚══════╝
-```
+╚═╝╚═════╝  ╚═════╝    ╚═╝   ╚══════╝</pre>
+</div>
 
 Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level
 directory (`bash`, `fish`, `foot`, ...) is a stow package whose contents
